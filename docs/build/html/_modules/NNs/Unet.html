@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NNs.Unet &#8212; AxonSurvey  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=12dfc556" />
+    <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for NNs.Unet</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch.nn</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nn</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+
+<div class="viewcode-block" id="DoubleConv">
+<a class="viewcode-back" href="../../_autosummary/NNs.Unet.html#NNs.Unet.DoubleConv">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">DoubleConv</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<div class="viewcode-block" id="DoubleConv.__init__">
+<a class="viewcode-back" href="../../_autosummary/NNs.Unet.html#NNs.Unet.DoubleConv.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_channels</span><span class="p">,</span> <span class="n">out_channels</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">conv_op</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">(</span><span class="n">in_channels</span><span class="p">,</span> <span class="n">out_channels</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">ReLU</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">(</span><span class="n">out_channels</span><span class="p">,</span> <span class="n">out_channels</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">ReLU</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DoubleConv.forward">
+<a class="viewcode-back" href="../../_autosummary/NNs.Unet.html#NNs.Unet.DoubleConv.forward">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">conv_op</span><span class="p">(</span><span class="n">x</span><span class="p">)</span></div>
+</div>
+
+    
+<div class="viewcode-block" id="DownSample">
+<a class="viewcode-back" href="../../_autosummary/NNs.Unet.html#NNs.Unet.DownSample">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">DownSample</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<div class="viewcode-block" id="DownSample.__init__">
+<a class="viewcode-back" href="../../_autosummary/NNs.Unet.html#NNs.Unet.DownSample.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_channels</span><span class="p">,</span> <span class="n">out_channels</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">conv</span> <span class="o">=</span> <span class="n">DoubleConv</span><span class="p">(</span><span class="n">in_channels</span><span class="p">,</span> <span class="n">out_channels</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pool</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">MaxPool2d</span><span class="p">(</span><span class="n">kernel_size</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DownSample.forward">
+<a class="viewcode-back" href="../../_autosummary/NNs.Unet.html#NNs.Unet.DownSample.forward">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="n">down</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conv</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pool</span><span class="p">(</span><span class="n">down</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">down</span><span class="p">,</span> <span class="n">p</span></div>
+</div>
+
+    
+<div class="viewcode-block" id="UpSample">
+<a class="viewcode-back" href="../../_autosummary/NNs.Unet.html#NNs.Unet.UpSample">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">UpSample</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<div class="viewcode-block" id="UpSample.__init__">
+<a class="viewcode-back" href="../../_autosummary/NNs.Unet.html#NNs.Unet.UpSample.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_channels</span><span class="p">,</span> <span class="n">out_channels</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">up</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">ConvTranspose2d</span><span class="p">(</span><span class="n">in_channels</span><span class="p">,</span> <span class="n">in_channels</span><span class="o">//</span><span class="mi">2</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">conv</span> <span class="o">=</span> <span class="n">DoubleConv</span><span class="p">(</span><span class="n">in_channels</span><span class="p">,</span> <span class="n">out_channels</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="UpSample.forward">
+<a class="viewcode-back" href="../../_autosummary/NNs.Unet.html#NNs.Unet.UpSample.forward">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x1</span><span class="p">,</span> <span class="n">x2</span><span class="p">):</span>
+        <span class="n">x1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">up</span><span class="p">(</span><span class="n">x1</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span><span class="n">x1</span><span class="p">,</span> <span class="n">x2</span><span class="p">],</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">conv</span><span class="p">(</span><span class="n">x</span><span class="p">)</span></div>
+</div>
+
+    
+
+    
+<div class="viewcode-block" id="test_Unet">
+<a class="viewcode-back" href="../../_autosummary/NNs.Unet.html#NNs.Unet.test_Unet">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">test_Unet</span><span class="p">():</span>
+    <span class="n">input_image</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">512</span><span class="p">,</span><span class="mi">512</span><span class="p">))</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">UNetModel</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="mi">10</span><span class="p">)</span>
+    <span class="n">output</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">input_image</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">output</span><span class="o">.</span><span class="n">size</span><span class="p">())</span></div>
+
+    
+    
+    
+<div class="viewcode-block" id="UNetModel">
+<a class="viewcode-back" href="../../_autosummary/NNs.Unet.html#NNs.Unet.UNetModel">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">UNetModel</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<div class="viewcode-block" id="UNetModel.__init__">
+<a class="viewcode-back" href="../../_autosummary/NNs.Unet.html#NNs.Unet.UNetModel.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_channels</span><span class="p">,</span> <span class="n">num_classes</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">down_convolution_1</span> <span class="o">=</span> <span class="n">DownSample</span><span class="p">(</span><span class="n">in_channels</span><span class="p">,</span> <span class="mi">64</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">down_convolution_2</span> <span class="o">=</span> <span class="n">DownSample</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">128</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">down_convolution_3</span> <span class="o">=</span> <span class="n">DownSample</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="mi">256</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">down_convolution_4</span> <span class="o">=</span> <span class="n">DownSample</span><span class="p">(</span><span class="mi">256</span><span class="p">,</span> <span class="mi">512</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">bottle_neck</span> <span class="o">=</span> <span class="n">DoubleConv</span><span class="p">(</span><span class="mi">512</span><span class="p">,</span> <span class="mi">1024</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">up_convolution_1</span> <span class="o">=</span> <span class="n">UpSample</span><span class="p">(</span><span class="mi">1024</span><span class="p">,</span> <span class="mi">512</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">up_convolution_2</span> <span class="o">=</span> <span class="n">UpSample</span><span class="p">(</span><span class="mi">512</span><span class="p">,</span> <span class="mi">256</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">up_convolution_3</span> <span class="o">=</span> <span class="n">UpSample</span><span class="p">(</span><span class="mi">256</span><span class="p">,</span> <span class="mi">128</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">up_convolution_4</span> <span class="o">=</span> <span class="n">UpSample</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="mi">64</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">(</span><span class="n">in_channels</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">out_channels</span><span class="o">=</span><span class="n">num_classes</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="UNetModel.forward">
+<a class="viewcode-back" href="../../_autosummary/NNs.Unet.html#NNs.Unet.UNetModel.forward">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">4</span><span class="p">,</span> <span class="s2">&quot;model input must be 4D - batch size + 3D image&quot;</span>
+        <span class="n">down_1</span><span class="p">,</span> <span class="n">p1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">down_convolution_1</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">down_2</span><span class="p">,</span> <span class="n">p2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">down_convolution_2</span><span class="p">(</span><span class="n">p1</span><span class="p">)</span>
+        <span class="n">down_3</span><span class="p">,</span> <span class="n">p3</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">down_convolution_3</span><span class="p">(</span><span class="n">p2</span><span class="p">)</span>
+        <span class="n">down_4</span><span class="p">,</span> <span class="n">p4</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">down_convolution_4</span><span class="p">(</span><span class="n">p3</span><span class="p">)</span>
+
+        <span class="n">b</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bottle_neck</span><span class="p">(</span><span class="n">p4</span><span class="p">)</span>
+
+        <span class="n">up_1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">up_convolution_1</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">down_4</span><span class="p">)</span>
+        <span class="n">up_2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">up_convolution_2</span><span class="p">(</span><span class="n">up_1</span><span class="p">,</span> <span class="n">down_3</span><span class="p">)</span>
+        <span class="n">up_3</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">up_convolution_3</span><span class="p">(</span><span class="n">up_2</span><span class="p">,</span> <span class="n">down_2</span><span class="p">)</span>
+        <span class="n">up_4</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">up_convolution_4</span><span class="p">(</span><span class="n">up_3</span><span class="p">,</span> <span class="n">down_1</span><span class="p">)</span>
+
+        <span class="n">out</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sigmoid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="p">(</span><span class="n">up_4</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">out</span></div>
+</div>
+
+    
+
+<div class="viewcode-block" id="SmallUNetModel">
+<a class="viewcode-back" href="../../_autosummary/NNs.Unet.html#NNs.Unet.SmallUNetModel">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">SmallUNetModel</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<div class="viewcode-block" id="SmallUNetModel.__init__">
+<a class="viewcode-back" href="../../_autosummary/NNs.Unet.html#NNs.Unet.SmallUNetModel.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_channels</span><span class="p">,</span> <span class="n">num_classes</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">down_convolution_1</span> <span class="o">=</span> <span class="n">DownSample</span><span class="p">(</span><span class="n">in_channels</span><span class="p">,</span> <span class="mi">32</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">down_convolution_2</span> <span class="o">=</span> <span class="n">DownSample</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">64</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">down_convolution_3</span> <span class="o">=</span> <span class="n">DownSample</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">128</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">bottle_neck</span> <span class="o">=</span> <span class="n">DoubleConv</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="mi">256</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">up_convolution_1</span> <span class="o">=</span> <span class="n">UpSample</span><span class="p">(</span><span class="mi">256</span><span class="p">,</span> <span class="mi">128</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">up_convolution_2</span> <span class="o">=</span> <span class="n">UpSample</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="mi">64</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">up_convolution_3</span> <span class="o">=</span> <span class="n">UpSample</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">32</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">(</span><span class="n">in_channels</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span> <span class="n">out_channels</span><span class="o">=</span><span class="n">num_classes</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SmallUNetModel.forward">
+<a class="viewcode-back" href="../../_autosummary/NNs.Unet.html#NNs.Unet.SmallUNetModel.forward">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="n">down_1</span><span class="p">,</span> <span class="n">p1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">down_convolution_1</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">down_2</span><span class="p">,</span> <span class="n">p2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">down_convolution_2</span><span class="p">(</span><span class="n">p1</span><span class="p">)</span>
+        <span class="n">down_3</span><span class="p">,</span> <span class="n">p3</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">down_convolution_3</span><span class="p">(</span><span class="n">p2</span><span class="p">)</span>
+
+        <span class="n">b</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bottle_neck</span><span class="p">(</span><span class="n">p3</span><span class="p">)</span>
+
+        <span class="n">up_1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">up_convolution_1</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">down_3</span><span class="p">)</span>
+        <span class="n">up_2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">up_convolution_2</span><span class="p">(</span><span class="n">up_1</span><span class="p">,</span> <span class="n">down_2</span><span class="p">)</span>
+        <span class="n">up_3</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">up_convolution_3</span><span class="p">(</span><span class="n">up_2</span><span class="p">,</span> <span class="n">down_1</span><span class="p">)</span>
+
+        <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="p">(</span><span class="n">up_3</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">out</span></div>
+</div>
+
+
+<div class="viewcode-block" id="SuperSmallUNetModel">
+<a class="viewcode-back" href="../../_autosummary/NNs.Unet.html#NNs.Unet.SuperSmallUNetModel">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">SuperSmallUNetModel</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<div class="viewcode-block" id="SuperSmallUNetModel.__init__">
+<a class="viewcode-back" href="../../_autosummary/NNs.Unet.html#NNs.Unet.SuperSmallUNetModel.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_channels</span><span class="p">,</span> <span class="n">num_classes</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">down_convolution_1</span> <span class="o">=</span> <span class="n">DownSample</span><span class="p">(</span><span class="n">in_channels</span><span class="p">,</span> <span class="mi">32</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">down_convolution_2</span> <span class="o">=</span> <span class="n">DownSample</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">64</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">bottle_neck</span> <span class="o">=</span> <span class="n">DoubleConv</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">128</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">up_convolution_1</span> <span class="o">=</span> <span class="n">UpSample</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="mi">64</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">up_convolution_2</span> <span class="o">=</span> <span class="n">UpSample</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">32</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">(</span><span class="n">in_channels</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span> <span class="n">out_channels</span><span class="o">=</span><span class="n">num_classes</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SuperSmallUNetModel.forward">
+<a class="viewcode-back" href="../../_autosummary/NNs.Unet.html#NNs.Unet.SuperSmallUNetModel.forward">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="n">down_1</span><span class="p">,</span> <span class="n">p1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">down_convolution_1</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">down_2</span><span class="p">,</span> <span class="n">p2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">down_convolution_2</span><span class="p">(</span><span class="n">p1</span><span class="p">)</span>
+
+        <span class="n">b</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bottle_neck</span><span class="p">(</span><span class="n">p2</span><span class="p">)</span>
+
+        <span class="n">up_1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">up_convolution_1</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">down_2</span><span class="p">)</span>
+        <span class="n">up_2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">up_convolution_2</span><span class="p">(</span><span class="n">up_1</span><span class="p">,</span> <span class="n">down_1</span><span class="p">)</span>
+        
+        <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="p">(</span><span class="n">up_2</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">out</span></div>
+</div>
+
+    
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">AxonSurvey</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html#data-preparation">Data Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html#evaluation">Evaluation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html#experiments">Experiments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html#image-estimators">Image Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html#inference">Inference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html#image-processing">Image Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html#neural-networks">Neural Networks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html#tracers">Tracers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html#utilities">Utilities</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Antoine Jean.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.3.7</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

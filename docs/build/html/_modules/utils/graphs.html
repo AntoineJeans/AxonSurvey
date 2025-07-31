@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>utils.graphs &#8212; AxonSurvey  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=12dfc556" />
+    <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for utils.graphs</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.patches</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mpatches</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.stats</span><span class="w"> </span><span class="kn">import</span> <span class="n">pearsonr</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="c1"># Global styling configuration</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s2">&quot;font.family&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Calibri&#39;</span>
+
+<span class="c1"># Constants for consistent styling</span>
+<span class="n">STYLE_CONFIG</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;dark&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">&#39;style&#39;</span><span class="p">:</span> <span class="s1">&#39;dark_background&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;contour_size&#39;</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span>
+        <span class="s1">&#39;figsize&#39;</span><span class="p">:</span> <span class="p">(</span><span class="mi">18</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span>
+        <span class="s1">&#39;title_fontsize&#39;</span><span class="p">:</span> <span class="mi">28</span><span class="p">,</span>
+        <span class="s1">&#39;label_fontsize&#39;</span><span class="p">:</span> <span class="mi">25</span><span class="p">,</span>
+        <span class="s1">&#39;tick_fontsize&#39;</span><span class="p">:</span> <span class="mi">15</span><span class="p">,</span>
+        <span class="s1">&#39;legend_fontsize&#39;</span><span class="p">:</span> <span class="mi">20</span><span class="p">,</span>
+        <span class="s1">&#39;legend_title_fontsize&#39;</span><span class="p">:</span> <span class="mi">25</span><span class="p">,</span>
+        <span class="s1">&#39;legend_facecolor&#39;</span><span class="p">:</span> <span class="s1">&#39;#004e52&#39;</span>
+    <span class="p">},</span>
+    <span class="s1">&#39;light&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">&#39;style&#39;</span><span class="p">:</span> <span class="s1">&#39;seaborn-v0_8-white&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;contour_size&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+        <span class="s1">&#39;figsize&#39;</span><span class="p">:</span> <span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">8</span><span class="p">),</span>
+        <span class="s1">&#39;title_fontsize&#39;</span><span class="p">:</span> <span class="mi">20</span><span class="p">,</span>
+        <span class="s1">&#39;label_fontsize&#39;</span><span class="p">:</span> <span class="mi">16</span><span class="p">,</span>
+        <span class="s1">&#39;tick_fontsize&#39;</span><span class="p">:</span> <span class="mi">12</span><span class="p">,</span>
+        <span class="s1">&#39;legend_fontsize&#39;</span><span class="p">:</span> <span class="mi">14</span><span class="p">,</span>
+        <span class="s1">&#39;legend_title_fontsize&#39;</span><span class="p">:</span> <span class="mi">16</span><span class="p">,</span>
+        <span class="s1">&#39;legend_facecolor&#39;</span><span class="p">:</span> <span class="s1">&#39;white&#39;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="c1"># Color schemes</span>
+<span class="n">COLOR_SCHEMES</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;model_types&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;baseline&quot;</span><span class="p">:</span> <span class="s1">&#39;#FFFFFF&#39;</span><span class="p">,</span>
+        <span class="s2">&quot;threshold&quot;</span><span class="p">:</span> <span class="s1">&#39;#f0aa6c&#39;</span><span class="p">,</span>
+        <span class="s2">&quot;DL&quot;</span><span class="p">:</span> <span class="s1">&#39;#7fdb92&#39;</span><span class="p">,</span>
+        <span class="s2">&quot;other&quot;</span><span class="p">:</span> <span class="s1">&#39;#a3a3a3&#39;</span>
+    <span class="p">},</span>
+    <span class="s1">&#39;predictors&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;#FFFFFF&#39;</span><span class="p">,</span> <span class="s1">&#39;#f0aa6c&#39;</span><span class="p">,</span> <span class="s1">&#39;#7fdb92&#39;</span><span class="p">],</span>
+    <span class="s1">&#39;default&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;#FFFFFF&#39;</span><span class="p">]</span>
+<span class="p">}</span>
+
+<div class="viewcode-block" id="apply_style">
+<a class="viewcode-back" href="../../_autosummary/utils.graphs.html#utils.graphs.apply_style">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">apply_style</span><span class="p">(</span><span class="n">style_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;dark&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Apply consistent styling to matplotlib plots.&quot;&quot;&quot;</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">STYLE_CONFIG</span><span class="p">[</span><span class="n">style_name</span><span class="p">]</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">style</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;style&#39;</span><span class="p">])</span></div>
+
+
+<div class="viewcode-block" id="setup_figure">
+<a class="viewcode-back" href="../../_autosummary/utils.graphs.html#utils.graphs.setup_figure">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">setup_figure</span><span class="p">(</span><span class="n">style_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;dark&#39;</span><span class="p">,</span> <span class="n">figsize</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">plt</span><span class="o">.</span><span class="n">Figure</span><span class="p">,</span> <span class="n">plt</span><span class="o">.</span><span class="n">Axes</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a figure with consistent styling and contour formatting.&quot;&quot;&quot;</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">STYLE_CONFIG</span><span class="p">[</span><span class="n">style_name</span><span class="p">]</span>
+    <span class="n">figsize</span> <span class="o">=</span> <span class="n">figsize</span> <span class="ow">or</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;figsize&#39;</span><span class="p">]</span>
+    <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="n">figsize</span><span class="p">)</span>
+    
+    <span class="c1"># Apply contour styling</span>
+    <span class="k">for</span> <span class="n">spine</span> <span class="ow">in</span> <span class="n">ax</span><span class="o">.</span><span class="n">spines</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+        <span class="n">spine</span><span class="o">.</span><span class="n">set_linewidth</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;contour_size&#39;</span><span class="p">])</span>
+    
+    <span class="k">return</span> <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span></div>
+
+
+<div class="viewcode-block" id="format_axes">
+<a class="viewcode-back" href="../../_autosummary/utils.graphs.html#utils.graphs.format_axes">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">format_axes</span><span class="p">(</span><span class="n">ax</span><span class="p">:</span> <span class="n">plt</span><span class="o">.</span><span class="n">Axes</span><span class="p">,</span> <span class="n">labels</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">title</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">ylabel</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> 
+                <span class="n">style_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;dark&#39;</span><span class="p">,</span> <span class="n">rotation</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">12.0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Format axes with consistent styling including ticks, labels, and title.&quot;&quot;&quot;</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">STYLE_CONFIG</span><span class="p">[</span><span class="n">style_name</span><span class="p">]</span>
+    
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xticks</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xticklabels</span><span class="p">(</span><span class="n">labels</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;tick_fontsize&#39;</span><span class="p">],</span> <span class="n">rotation</span><span class="o">=</span><span class="n">rotation</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">tick_params</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="n">labelsize</span><span class="o">=</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;tick_fontsize&#39;</span><span class="p">])</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="n">ylabel</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;label_fontsize&#39;</span><span class="p">])</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="n">title</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;title_fontsize&#39;</span><span class="p">],</span> <span class="n">pad</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="n">bottom</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="create_legend">
+<a class="viewcode-back" href="../../_autosummary/utils.graphs.html#utils.graphs.create_legend">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">create_legend</span><span class="p">(</span><span class="n">ax</span><span class="p">:</span> <span class="n">plt</span><span class="o">.</span><span class="n">Axes</span><span class="p">,</span> <span class="n">handles</span><span class="p">:</span> <span class="n">List</span><span class="p">,</span> <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;Legend&quot;</span><span class="p">,</span> 
+                 <span class="n">style_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;dark&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a legend with consistent styling and positioning.&quot;&quot;&quot;</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">STYLE_CONFIG</span><span class="p">[</span><span class="n">style_name</span><span class="p">]</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span>
+        <span class="n">handles</span><span class="o">=</span><span class="n">handles</span><span class="p">,</span>
+        <span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">,</span>
+        <span class="n">title_fontsize</span><span class="o">=</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;legend_title_fontsize&#39;</span><span class="p">],</span>
+        <span class="n">fontsize</span><span class="o">=</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;legend_fontsize&#39;</span><span class="p">],</span>
+        <span class="n">loc</span><span class="o">=</span><span class="s1">&#39;upper right&#39;</span><span class="p">,</span>
+        <span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
+        <span class="n">facecolor</span><span class="o">=</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;legend_facecolor&#39;</span><span class="p">]</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="save_plot">
+<a class="viewcode-back" href="../../_autosummary/utils.graphs.html#utils.graphs.save_plot">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">save_plot</span><span class="p">(</span><span class="n">title</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">save_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Save plot with consistent naming and high-quality settings.&quot;&quot;&quot;</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">save_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">save_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">save_path</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">title</span><span class="si">}</span><span class="s2">.png&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">save_file</span><span class="p">,</span> <span class="n">transparent</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s1">&#39;tight&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">style</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="s1">&#39;classic&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="get_model_colors">
+<a class="viewcode-back" href="../../_autosummary/utils.graphs.html#utils.graphs.get_model_colors">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_model_colors</span><span class="p">(</span><span class="n">model_types</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get color mapping for different model types.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">model_types</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">COLOR_SCHEMES</span><span class="p">[</span><span class="s1">&#39;default&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="mi">10</span>  <span class="c1"># Fallback for unknown number</span>
+    
+    <span class="n">type_to_color</span> <span class="o">=</span> <span class="n">COLOR_SCHEMES</span><span class="p">[</span><span class="s1">&#39;model_types&#39;</span><span class="p">]</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">type_to_color</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">type_to_color</span><span class="p">[</span><span class="s1">&#39;other&#39;</span><span class="p">])</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">model_types</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="create_box_data">
+<a class="viewcode-back" href="../../_autosummary/utils.graphs.html#utils.graphs.create_box_data">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">create_box_data</span><span class="p">(</span><span class="n">expected</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">lower</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">upper</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create standardized box plot data structure for matplotlib.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s1">&#39;med&#39;</span><span class="p">:</span> <span class="n">expected</span><span class="p">,</span>
+        <span class="s1">&#39;q1&#39;</span><span class="p">:</span> <span class="n">lower</span><span class="p">,</span>
+        <span class="s1">&#39;q3&#39;</span><span class="p">:</span> <span class="n">upper</span><span class="p">,</span>
+        <span class="s1">&#39;whislo&#39;</span><span class="p">:</span> <span class="n">lower</span><span class="p">,</span>
+        <span class="s1">&#39;whishi&#39;</span><span class="p">:</span> <span class="n">upper</span><span class="p">,</span>
+        <span class="s1">&#39;fliers&#39;</span><span class="p">:</span> <span class="p">[]</span>
+    <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="display_model_bounds">
+<a class="viewcode-back" href="../../_autosummary/utils.graphs.html#utils.graphs.display_model_bounds">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">display_model_bounds</span><span class="p">(</span><span class="n">expected</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">lower</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">upper</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> 
+                        <span class="n">labels</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">title</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">metric_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> 
+                        <span class="n">save_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">nice</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> 
+                        <span class="n">model_types</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Display model performance bounds as bar charts or box plots.&quot;&quot;&quot;</span>
+    
+    <span class="k">if</span> <span class="n">nice</span><span class="p">:</span>
+        <span class="n">apply_style</span><span class="p">(</span><span class="s1">&#39;dark&#39;</span><span class="p">)</span>
+        <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">setup_figure</span><span class="p">(</span><span class="s1">&#39;dark&#39;</span><span class="p">)</span>
+        
+        <span class="c1"># Get colors and create bars</span>
+        <span class="n">model_colors</span> <span class="o">=</span> <span class="n">get_model_colors</span><span class="p">(</span><span class="n">model_types</span><span class="p">)</span>
+        <span class="n">bars</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">expected</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span> <span class="n">expected</span><span class="p">,</span> 
+                     <span class="n">color</span><span class="o">=</span><span class="n">model_colors</span><span class="p">[:</span><span class="nb">len</span><span class="p">(</span><span class="n">expected</span><span class="p">)],</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        
+        <span class="c1"># Add legend if model types are provided</span>
+        <span class="k">if</span> <span class="n">model_types</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">type_to_color</span> <span class="o">=</span> <span class="n">COLOR_SCHEMES</span><span class="p">[</span><span class="s1">&#39;model_types&#39;</span><span class="p">]</span>
+            <span class="n">existing_types</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">model_types</span><span class="p">)</span>
+            <span class="n">legend_patches</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">mpatches</span><span class="o">.</span><span class="n">Patch</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="n">type_to_color</span><span class="p">[</span><span class="n">label</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="n">label</span><span class="p">)</span> 
+                <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">type_to_color</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="k">if</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">existing_types</span>
+            <span class="p">]</span>
+            <span class="n">create_legend</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">legend_patches</span><span class="p">,</span> <span class="s2">&quot;Extractor types&quot;</span><span class="p">)</span>
+        
+        <span class="c1"># Format axes</span>
+        <span class="n">format_axes</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Expected model </span><span class="si">{</span><span class="n">metric_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">apply_style</span><span class="p">(</span><span class="s1">&#39;light&#39;</span><span class="p">)</span>
+        <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">setup_figure</span><span class="p">(</span><span class="s1">&#39;light&#39;</span><span class="p">,</span> <span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+        
+        <span class="c1"># Create box plots</span>
+        <span class="n">boxes</span> <span class="o">=</span> <span class="p">[</span><span class="n">create_box_data</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">l</span><span class="p">,</span> <span class="n">u</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span><span class="p">,</span> <span class="n">l</span><span class="p">,</span> <span class="n">u</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">expected</span><span class="p">,</span> <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">)]</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">box</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">boxes</span><span class="p">):</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">bxp</span><span class="p">([</span><span class="n">box</span><span class="p">],</span> <span class="n">positions</span><span class="o">=</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">],</span> <span class="n">showfliers</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        
+        <span class="c1"># Format axes with different rotation for compactness</span>
+        <span class="n">format_axes</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Expected model </span><span class="si">{</span><span class="n">metric_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s1">&#39;light&#39;</span><span class="p">,</span> <span class="mf">20.0</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
+    
+    <span class="n">save_plot</span><span class="p">(</span><span class="n">title</span><span class="p">,</span> <span class="n">save_path</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="display_inference_bounds">
+<a class="viewcode-back" href="../../_autosummary/utils.graphs.html#utils.graphs.display_inference_bounds">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">display_inference_bounds</span><span class="p">(</span><span class="n">confidence_bounds</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]],</span> 
+                           <span class="n">labels</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">title</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> 
+                           <span class="n">predictor_names</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                           <span class="n">property_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;Density&quot;</span><span class="p">,</span> 
+                           <span class="n">save_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Display inference confidence bounds as grouped box plots.&quot;&quot;&quot;</span>
+    
+    <span class="n">apply_style</span><span class="p">(</span><span class="s1">&#39;dark&#39;</span><span class="p">)</span>
+    
+    <span class="c1"># Calculate global bounds for consistent y-axis</span>
+    <span class="n">all_bounds</span> <span class="o">=</span> <span class="p">[</span><span class="n">bound</span> <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">confidence_bounds</span> <span class="k">for</span> <span class="n">bound</span> <span class="ow">in</span> <span class="n">group</span><span class="p">]</span>
+    <span class="n">total_minimum</span> <span class="o">=</span> <span class="nb">min</span><span class="p">([</span><span class="n">l</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">all_bounds</span><span class="p">])</span>
+    <span class="n">total_maximum</span> <span class="o">=</span> <span class="nb">max</span><span class="p">([</span><span class="n">u</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">all_bounds</span><span class="p">])</span>
+    
+    <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">setup_figure</span><span class="p">(</span><span class="s1">&#39;dark&#39;</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">predictor_names</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># Single predictor case - more compact</span>
+        <span class="n">confidence_bounds</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">confidence_bounds</span><span class="p">]</span>
+        <span class="n">boxes</span> <span class="o">=</span> <span class="p">[</span><span class="n">create_box_data</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">l</span><span class="p">,</span> <span class="n">u</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span><span class="p">,</span> <span class="n">l</span><span class="p">,</span> <span class="n">u</span> <span class="ow">in</span> <span class="n">confidence_bounds</span><span class="p">]</span>
+        
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">box</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">boxes</span><span class="p">):</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">bxp</span><span class="p">([</span><span class="n">box</span><span class="p">],</span> <span class="n">positions</span><span class="o">=</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">],</span> <span class="n">showfliers</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">widths</span><span class="o">=</span><span class="mf">0.6</span><span class="p">)</span>
+    
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Multiple predictors case</span>
+        <span class="n">colors</span> <span class="o">=</span> <span class="n">COLOR_SCHEMES</span><span class="p">[</span><span class="s1">&#39;predictors&#39;</span><span class="p">]</span>
+        <span class="n">num_groups</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">confidence_bounds</span><span class="p">)</span>
+        <span class="n">num_predictors</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">predictor_names</span><span class="p">)</span>
+        <span class="n">group_width</span> <span class="o">=</span> <span class="mf">0.8</span>
+        <span class="n">box_width</span> <span class="o">=</span> <span class="n">group_width</span> <span class="o">/</span> <span class="n">num_predictors</span>
+        
+        <span class="n">legend_handles</span> <span class="o">=</span> <span class="p">[]</span>
+        
+        <span class="k">for</span> <span class="n">group_idx</span><span class="p">,</span> <span class="n">group_bounds</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">confidence_bounds</span><span class="p">):</span>
+            <span class="n">group_center</span> <span class="o">=</span> <span class="n">group_idx</span> <span class="o">+</span> <span class="mi">1</span>
+            
+            <span class="k">for</span> <span class="n">pred_idx</span><span class="p">,</span> <span class="p">(</span><span class="n">pred_name</span><span class="p">,</span> <span class="n">bounds</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">predictor_names</span><span class="p">,</span> <span class="n">group_bounds</span><span class="p">)):</span>
+                <span class="n">e</span><span class="p">,</span> <span class="n">l</span><span class="p">,</span> <span class="n">u</span> <span class="o">=</span> <span class="n">bounds</span>
+                <span class="n">color</span> <span class="o">=</span> <span class="n">colors</span><span class="p">[</span><span class="n">pred_idx</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">colors</span><span class="p">)]</span>
+                
+                <span class="c1"># Calculate position within the group</span>
+                <span class="n">offset</span> <span class="o">=</span> <span class="p">(</span><span class="n">pred_idx</span> <span class="o">-</span> <span class="p">(</span><span class="n">num_predictors</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">box_width</span>
+                <span class="n">position</span> <span class="o">=</span> <span class="n">group_center</span> <span class="o">+</span> <span class="n">offset</span>
+                
+                <span class="c1"># Create box plot</span>
+                <span class="n">box_data</span> <span class="o">=</span> <span class="n">create_box_data</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">l</span><span class="p">,</span> <span class="n">u</span><span class="p">)</span>
+                <span class="n">bp</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">bxp</span><span class="p">([</span><span class="n">box_data</span><span class="p">],</span> <span class="n">positions</span><span class="o">=</span><span class="p">[</span><span class="n">position</span><span class="p">],</span> <span class="n">showfliers</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> 
+                           <span class="n">patch_artist</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">widths</span><span class="o">=</span><span class="n">box_width</span><span class="o">*</span><span class="mf">0.8</span><span class="p">)</span>
+                
+                <span class="c1"># Set color for the box</span>
+                <span class="k">for</span> <span class="n">patch</span> <span class="ow">in</span> <span class="n">bp</span><span class="p">[</span><span class="s1">&#39;boxes&#39;</span><span class="p">]:</span>
+                    <span class="n">patch</span><span class="o">.</span><span class="n">set_facecolor</span><span class="p">(</span><span class="n">color</span><span class="p">)</span>
+                    <span class="n">patch</span><span class="o">.</span><span class="n">set_alpha</span><span class="p">(</span><span class="mf">1.0</span><span class="p">)</span>
+                
+                <span class="c1"># Add to legend handles (only once per predictor)</span>
+                <span class="k">if</span> <span class="n">group_idx</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">legend_handles</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mpatches</span><span class="o">.</span><span class="n">Patch</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">pred_name</span><span class="p">))</span>
+        
+        <span class="c1"># Add legend</span>
+        <span class="n">create_legend</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">legend_handles</span><span class="p">,</span> <span class="s2">&quot;Estimator types&quot;</span><span class="p">)</span>
+    
+    <span class="c1"># Format axes with improved y-axis limits</span>
+    <span class="n">format_axes</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Expected </span><span class="si">{</span><span class="n">property_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="n">total_minimum</span> <span class="o">*</span> <span class="mf">0.95</span><span class="p">,</span> <span class="n">total_maximum</span> <span class="o">*</span> <span class="mf">1.05</span><span class="p">)</span>  <span class="c1"># More compact y-axis</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span>
+    
+    <span class="n">save_plot</span><span class="p">(</span><span class="n">title</span><span class="p">,</span> <span class="n">save_path</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="display_inference_points">
+<a class="viewcode-back" href="../../_autosummary/utils.graphs.html#utils.graphs.display_inference_points">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">display_inference_points</span><span class="p">(</span><span class="n">group_data</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">]],</span> <span class="n">labels</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> 
+                           <span class="n">title</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">property_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;Density&quot;</span><span class="p">,</span> 
+                           <span class="n">save_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Display inference points as scatter plots with background ranges.&quot;&quot;&quot;</span>
+    
+    <span class="n">apply_style</span><span class="p">(</span><span class="s1">&#39;dark&#39;</span><span class="p">)</span>
+    
+    <span class="c1"># Calculate total range for y-axis</span>
+    <span class="n">all_points</span> <span class="o">=</span> <span class="p">[</span><span class="n">point</span> <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">group_data</span> <span class="k">for</span> <span class="n">point</span> <span class="ow">in</span> <span class="n">group</span><span class="p">]</span>
+    <span class="n">total_maximum</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">all_points</span><span class="p">)</span>
+    
+    <span class="c1"># Use more compact figure size</span>
+    <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">setup_figure</span><span class="p">(</span><span class="s1">&#39;dark&#39;</span><span class="p">,</span> <span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+    
+    <span class="c1"># Display points with improved spacing</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="n">points</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">labels</span><span class="p">,</span> <span class="n">group_data</span><span class="p">)):</span>
+        <span class="n">x_position</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span>
+        
+        <span class="c1"># Calculate min and max for this group</span>
+        <span class="n">group_min</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">points</span><span class="p">)</span>
+        <span class="n">group_max</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">points</span><span class="p">)</span>
+        
+        <span class="c1"># Add background box with reduced alpha for better visibility</span>
+        <span class="n">box_width</span> <span class="o">=</span> <span class="mf">0.3</span>  <span class="c1"># More compact</span>
+        <span class="n">box_height</span> <span class="o">=</span> <span class="n">group_max</span> <span class="o">-</span> <span class="n">group_min</span>
+        <span class="n">box_x</span> <span class="o">=</span> <span class="n">x_position</span> <span class="o">-</span> <span class="n">box_width</span><span class="o">/</span><span class="mi">2</span>
+        <span class="n">box_y</span> <span class="o">=</span> <span class="n">group_min</span>
+        
+        <span class="n">rect</span> <span class="o">=</span> <span class="n">mpatches</span><span class="o">.</span><span class="n">Rectangle</span><span class="p">((</span><span class="n">box_x</span><span class="p">,</span> <span class="n">box_y</span><span class="p">),</span> <span class="n">box_width</span><span class="p">,</span> <span class="n">box_height</span><span class="p">,</span> 
+                                <span class="n">facecolor</span><span class="o">=</span><span class="s1">&#39;#f0aa6c&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">edgecolor</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">add_patch</span><span class="p">(</span><span class="n">rect</span><span class="p">)</span>
+        
+        <span class="c1"># Plot points with smaller size for better density</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">([</span><span class="n">x_position</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">points</span><span class="p">),</span> <span class="n">points</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;#FFFFFF&#39;</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.8</span><span class="p">)</span>
+        
+        <span class="c1"># Add mean line</span>
+        <span class="n">mean_val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">points</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="n">x_position</span><span class="o">-</span><span class="mf">0.25</span><span class="p">,</span> <span class="n">x_position</span><span class="o">+</span><span class="mf">0.25</span><span class="p">],</span> <span class="p">[</span><span class="n">mean_val</span><span class="p">,</span> <span class="n">mean_val</span><span class="p">],</span> 
+                <span class="n">color</span><span class="o">=</span><span class="s1">&#39;#f0aa6c&#39;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+    
+    <span class="c1"># Format axes with more compact limits</span>
+    <span class="n">format_axes</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Expected </span><span class="si">{</span><span class="n">property_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">total_maximum</span> <span class="o">*</span> <span class="mf">1.05</span><span class="p">)</span>  <span class="c1"># Start from 0 for better interpretation</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span>
+    
+    <span class="n">save_plot</span><span class="p">(</span><span class="n">title</span><span class="p">,</span> <span class="n">save_path</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="plot_single_variable_fitness">
+<a class="viewcode-back" href="../../_autosummary/utils.graphs.html#utils.graphs.plot_single_variable_fitness">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_single_variable_fitness</span><span class="p">(</span><span class="n">estimated</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">real_property</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> 
+                                <span class="n">estimated_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;Estimated Value&quot;</span><span class="p">,</span>
+                                <span class="n">real_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;Real Value&quot;</span><span class="p">,</span>
+                                <span class="n">display_stats</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Plot correlation between estimated and real values with trend line.&quot;&quot;&quot;</span>
+    
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">estimated</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">real_property</span><span class="p">),</span> <span class="s1">&#39;estimated and predicted value lists not same length&#39;</span>
+    
+    <span class="c1"># Compute Pearson correlation coefficient</span>
+    <span class="n">r</span><span class="p">,</span> <span class="n">p_value</span> <span class="o">=</span> <span class="n">pearsonr</span><span class="p">(</span><span class="n">estimated</span><span class="p">,</span> <span class="n">real_property</span><span class="p">)</span>
+    
+    <span class="n">apply_style</span><span class="p">(</span><span class="s1">&#39;light&#39;</span><span class="p">)</span>
+    <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">setup_figure</span><span class="p">(</span><span class="s1">&#39;light&#39;</span><span class="p">,</span> <span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+    
+    <span class="c1"># Create scatter plot with improved styling</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">estimated</span><span class="p">,</span> <span class="n">real_property</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span> <span class="n">edgecolors</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">80</span><span class="p">)</span>
+    
+    <span class="c1"># Add trend line for better interpretation</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">polyfit</span><span class="p">(</span><span class="n">estimated</span><span class="p">,</span> <span class="n">real_property</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">poly1d</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">estimated</span><span class="p">,</span> <span class="n">p</span><span class="p">(</span><span class="n">estimated</span><span class="p">),</span> <span class="s2">&quot;r--&quot;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.8</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+    
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="n">estimated_name</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="n">real_name</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">display_stats</span><span class="p">:</span>
+        <span class="n">title</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">estimated_name</span><span class="si">}</span><span class="s2"> vs </span><span class="si">{</span><span class="n">real_name</span><span class="si">}</span><span class="s2">: R=</span><span class="si">{</span><span class="n">r</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">, p=</span><span class="si">{</span><span class="n">p_value</span><span class="si">:</span><span class="s2">.2e</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">title</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">estimated_name</span><span class="si">}</span><span class="s2"> vs </span><span class="si">{</span><span class="n">real_name</span><span class="si">}</span><span class="s2">&quot;</span>
+    
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="n">title</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">16</span><span class="p">,</span> <span class="n">pad</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
+    
+    <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">style</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="s1">&#39;classic&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="display_model_rmse">
+<a class="viewcode-back" href="../../_autosummary/utils.graphs.html#utils.graphs.display_model_rmse">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">display_model_rmse</span><span class="p">(</span><span class="n">expected</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">labels</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">title</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Display RMSE values as bar chart with value labels.&quot;&quot;&quot;</span>
+    
+    <span class="n">apply_style</span><span class="p">(</span><span class="s1">&#39;light&#39;</span><span class="p">)</span>
+    <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">setup_figure</span><span class="p">(</span><span class="s1">&#39;light&#39;</span><span class="p">,</span> <span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+    
+    <span class="n">bars</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span><span class="n">labels</span><span class="p">,</span> <span class="n">expected</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;skyblue&quot;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.8</span><span class="p">)</span>
+    
+    <span class="c1"># Add value labels on bars for better readability</span>
+    <span class="k">for</span> <span class="n">bar</span> <span class="ow">in</span> <span class="n">bars</span><span class="p">:</span>
+        <span class="n">height</span> <span class="o">=</span> <span class="n">bar</span><span class="o">.</span><span class="n">get_height</span><span class="p">()</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">bar</span><span class="o">.</span><span class="n">get_x</span><span class="p">()</span> <span class="o">+</span> <span class="n">bar</span><span class="o">.</span><span class="n">get_width</span><span class="p">()</span><span class="o">/</span><span class="mf">2.</span><span class="p">,</span> <span class="n">height</span> <span class="o">+</span> <span class="n">height</span><span class="o">*</span><span class="mf">0.01</span><span class="p">,</span>
+                <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">height</span><span class="si">:</span><span class="s1">.3f</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;bottom&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+    
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">max</span><span class="p">(</span><span class="n">expected</span><span class="p">)</span> <span class="o">*</span> <span class="mf">1.15</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Expected Density&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="n">title</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">16</span><span class="p">,</span> <span class="n">pad</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">tick_params</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">rotation</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+    
+    <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">style</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="s1">&#39;classic&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="display_test_bias_for_group">
+<a class="viewcode-back" href="../../_autosummary/utils.graphs.html#utils.graphs.display_test_bias_for_group">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">display_test_bias_for_group</span><span class="p">(</span><span class="n">biases</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">alpha</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> 
+                              <span class="n">name_list</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">group_label</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Display test bias statistics as bar chart with threshold line.&quot;&quot;&quot;</span>
+    
+    <span class="n">apply_style</span><span class="p">(</span><span class="s1">&#39;light&#39;</span><span class="p">)</span>
+    <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">setup_figure</span><span class="p">(</span><span class="s1">&#39;light&#39;</span><span class="p">,</span> <span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+    
+    <span class="n">bias_values</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span> <span class="o">-</span> <span class="n">bias</span> <span class="k">for</span> <span class="n">bias</span> <span class="ow">in</span> <span class="n">biases</span><span class="p">]</span>
+    <span class="n">bars</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span><span class="n">name_list</span><span class="p">,</span> <span class="n">bias_values</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;skyblue&quot;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.8</span><span class="p">)</span>
+    
+    <span class="c1"># Add value labels on bars</span>
+    <span class="k">for</span> <span class="n">bar</span> <span class="ow">in</span> <span class="n">bars</span><span class="p">:</span>
+        <span class="n">height</span> <span class="o">=</span> <span class="n">bar</span><span class="o">.</span><span class="n">get_height</span><span class="p">()</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">bar</span><span class="o">.</span><span class="n">get_x</span><span class="p">()</span> <span class="o">+</span> <span class="n">bar</span><span class="o">.</span><span class="n">get_width</span><span class="p">()</span><span class="o">/</span><span class="mf">2.</span><span class="p">,</span> <span class="n">height</span> <span class="o">+</span> <span class="mf">0.01</span><span class="p">,</span>
+                <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">height</span><span class="si">:</span><span class="s1">.3f</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;bottom&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+    
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Bias statistic&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">tick_params</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">rotation</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+    
+    <span class="c1"># Add threshold line</span>
+    <span class="n">threshold</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">alpha</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">axhline</span><span class="p">(</span><span class="n">y</span><span class="o">=</span><span class="n">threshold</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> 
+               <span class="n">label</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Threshold = </span><span class="si">{</span><span class="n">threshold</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    
+    <span class="n">title</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Bias for models in </span><span class="si">{</span><span class="n">group_label</span><span class="si">}</span><span class="s2"> regions&quot;</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="n">title</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">16</span><span class="p">,</span> <span class="n">pad</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>
+    
+    <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">style</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="s1">&#39;classic&#39;</span><span class="p">)</span></div>
+
+        
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">AxonSurvey</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html#data-preparation">Data Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html#evaluation">Evaluation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html#experiments">Experiments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html#image-estimators">Image Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html#inference">Inference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html#image-processing">Image Processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html#neural-networks">Neural Networks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html#tracers">Tracers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html#utilities">Utilities</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Antoine Jean.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.3.7</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

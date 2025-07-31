@@ -1,0 +1,16 @@
+notebook
+torch
+
+numpy
+matplotlib
+seaborn
+
+pillow
+imageio
+scipy
+scikit-image
+
+opencv
+
+sklearn
+sphinx

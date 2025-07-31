@@ -1,0 +1,144 @@
+API Reference
+============
+
+.. autosummary::
+   :toctree: _autosummary
+   :template: custom-module-template.rst
+   :recursive:
+
+   dataprep
+   evaluation
+   experiments
+   image_estimators
+   inference
+   imgproc
+   NNs
+   tracers
+   utils
+
+Data Preparation
+================
+
+.. autosummary::
+   :toctree: _autosummary
+   :template: custom-module-template.rst
+   :recursive:
+
+   dataprep.DataReader
+   dataprep.DataSampler
+   dataprep.FileOperations
+   dataprep.SampleSaver
+   dataprep.SamplingStrategies
+   dataprep.TracingChecker
+
+Evaluation
+================
+
+.. autosummary::
+   :toctree: _autosummary
+   :template: custom-module-template.rst
+   :recursive:
+
+   evaluation.Evaluator
+   evaluation.RegressionEvaluator
+   evaluation.TracerEval
+   evaluation.Trainer
+
+Experiments
+================
+
+.. autosummary::
+   :toctree: _autosummary
+   :template: custom-module-template.rst
+   :recursive:
+
+   experiments.ExperimentLoader
+   experiments.InferencePipeline
+
+Image Estimators
+================
+
+.. autosummary::
+   :toctree: _autosummary
+   :template: custom-module-template.rst
+   :recursive:
+
+   image_estimators.BaseFeatureExtractor
+   image_estimators.BaselineMeanExtractors
+   image_estimators.OtsuExtractors
+   image_estimators.PropertyModel
+   image_estimators.ThresholdDensityExtractor
+   image_estimators.TracerExtractor
+
+Inference
+================
+
+.. autosummary::
+   :toctree: _autosummary
+   :template: custom-module-template.rst
+   :recursive:
+
+   inference.BaseEstimator
+   inference.TempEstimator
+
+Image Processing
+================
+
+.. autosummary::
+   :toctree: _autosummary
+   :template: custom-module-template.rst
+   :recursive:
+
+   imgproc.dataset_prep
+   imgproc.denoising
+   imgproc.density_estimation
+   imgproc.image_io
+   imgproc.pipeline_instances
+   imgproc.Pipeline
+   imgproc.tracing
+   imgproc.Transforms
+   imgproc.utils
+
+Neural Networks
+================
+
+.. autosummary::
+   :toctree: _autosummary
+   :template: custom-module-template.rst
+   :recursive:
+
+   NNs.Dataset
+   NNs.inference
+   NNs.training
+   NNs.Unet
+   NNs.viz
+
+Tracers
+================
+
+.. autosummary::
+   :toctree: _autosummary
+   :template: custom-module-template.rst
+   :recursive:
+
+   tracers.BaseTracer
+   tracers.DeterministicTracer
+   tracers.DLTracer
+   tracers.metrics
+
+Utilities
+================
+
+.. autosummary::
+   :toctree: _autosummary
+   :template: custom-module-template.rst
+   :recursive:
+
+   utils.graphs
+   utils.image_manip
+   utils.imageio
+   utils.ImageLoader
+   utils.Splitter
+   utils.trace_manips
+   utils.traceProps
+   utils.viz 

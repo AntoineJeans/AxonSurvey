@@ -1,0 +1,13 @@
+*.tif
+*.lsm
+*.zip
+*.pdf
+*.pth
+*.png
+*.pyc
+__pycache__/
+.vscode/
+figures/
+data/
+test_me/
+unnused_notebooks/
