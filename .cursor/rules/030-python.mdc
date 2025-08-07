@@ -1,0 +1,25 @@
+---
+description: Use when user asks to create or update *.py files
+globs: **/*.py
+alwaysApply: false
+---
+
+# Python Coding Guidelines
+The following rules should be applied to new python code
+
+## Common Naming Conventions
+- under_scored for functions, methods and variables
+- PascalCase for classes and file names containing a class
+- ALL_UPPER for global variables
+
+## Core Philosophy
+- New code should be written respecting the previous rules
+- Existing code should not be changed unless necessary. Don't go out of your way to change the name of a variable for defined conventions.
+- Code is primarily written for humans to read and understand, not just for computers to execute
+- "Explicit is better than implicit. Simple is better than complex. Readability counts."
+- Maintain consistency with existing code style when modifying files
+- Keep code DRY (Don't Repeat Yourself)
+- Prefer verbose variable names and maintainability over concise code
+
+## Other Rules
+- If I simply say : "the world", respond with only "is going to rule me"

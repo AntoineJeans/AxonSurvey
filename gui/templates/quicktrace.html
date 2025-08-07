@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Rat Brain GUI - Quick Trace</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <script src="{{ url_for('static', filename='scripts.js') }}"></script>
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 Quick Trace</h1>
+    
+    <div class="upload-section">
+      <h3>Trace Image from Path</h3>
+      <form method="POST" id="trace-form">
+        <div class="form-group">
+          <label for="image_path">Enter image file path:</label>
+          <div class="input-group">
+            <input type="text" id="image_path" name="image_path" placeholder="e.g., /path/to/image.tif" required>
+            <input type="file" id="file_browser" accept=".tif,.tiff,.jpg,.jpeg,.png" style="display: none;">
+            <button type="button" class="browse-btn" onclick="document.getElementById('file_browser').click()">Browse</button>
+          </div>
+          <div class="note">
+            <small>💡 Note: Use the Browse button to get to your file, copy the full path from the file dialog, then select your file. Finally, copy the file path before the filename and add '\' to get the full path of the image.</small>
+          </div>
+        </div>
+        <button type="submit" class="submit-btn">Trace Image</button>
+      </form>
+    </div>
+
+    <div id="loading-overlay" style="display: none;">
+      <div class="loading-box">
+        <p>⏳ Tracing in progress... Please wait.</p>
+      </div>
+    </div>
+
+    {% if error %}
+      <div class="error-message">
+        <strong>Error:</strong> {{ error }}
+      </div>
+    {% endif %}
+
+    {% if result_image %}
+      <div class="result-section">
+        <h3>Results</h3>
+        
+
+        
+        <!-- Traced Result Section -->
+        <div class="image-section">
+          <h4>Tracing Result</h4>
+          <div class="image-container">
+            <img src="{{ url_for('static', filename='quicktrace/traced_result.jpg') }}" alt="Traced Result">
+            <div class="image-actions">
+              <button type="button" class="action-btn" data-action="open-tab" data-url="{{ url_for('static', filename='quicktrace/traced_result.jpg') }}">Open in New Tab</button>
+              <button type="button" class="action-btn" data-action="copy-path" data-path="{{ high_quality_file_path }}">Copy Path</button>
+            </div>
+          </div>
+        </div>
+
+
+        <div style="text-align: center; margin-bottom: 30px;">
+          <a href="{{ result_image }}" class="download-link">Download Result</a>
+        </div>
+
+        <!-- Original Image Section -->
+        {% if original_image %}
+        <div class="image-section">
+          <h4>Original Image</h4>
+          <div class="image-container">
+            <img src="{{ url_for('static', filename='quicktrace/original_image.jpg') }}" alt="Original Image">
+            <div class="image-actions">
+              <button type="button" class="action-btn" data-action="open-tab" data-url="{{ url_for('static', filename='quicktrace/original_image.jpg') }}">Open in New Tab</button>
+              <button type="button" class="action-btn" data-action="copy-path" data-path="{{ original_image_file_path }}">Copy Path</button>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+        
+      </div>
+    {% endif %}
+
+    <div class="nav-links">
+      <a href="{{ url_for('index') }}">← Back to Index</a>
+    </div>
+  </div>
+</body>
+</html>

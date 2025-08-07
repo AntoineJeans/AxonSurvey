@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Rat Brain GUI - Available Rats</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <div class="container">
+    <h1>🐭 Available Rats</h1>
+    
+    {% if rats %}
+      <div class="rats-grid">
+        {% for rat in rats %}
+          <div class="rat-card">
+            <a href="{{ url_for('rat_page', rat_id=rat) }}">{{ rat }}</a>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p style="text-align: center; color: #6c757d;">No rats found in the data directory.</p>
+    {% endif %}
+
+    <div class="nav-links">
+      <a href="{{ url_for('compare_page') }}">Compare Rats</a>
+      <a href="{{ url_for('quicktrace_page') }}">Quick Trace</a>
+    </div>
+  </div>
+</body>
+</html> 

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Rat Brain GUI - Comparison Result</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <div class="container comparison-page">
+    <h1>🔬 Comparison Result</h1>
+    
+    <div class="comparison-info">
+      <h2>Comparing {{ rats|length }} rats in {{ region }}</h2>
+      <p><strong>Rats:</strong> {{ ', '.join(rats) }}</p>
+    </div>
+
+    <div class="todo-notice">
+      <strong>⚠️ TODO:</strong> Comparison functionality not yet implemented. 
+      This page will show statistical comparisons and visualizations when completed.
+    </div>
+
+    {% if comparison_image %}
+      <div class="comparison-image">
+        <h3>Comparison Visualization</h3>
+        <img src="{{ comparison_image }}" alt="Comparison visualization">
+      </div>
+    {% endif %}
+
+    <div class="nav-links">
+      <a href="{{ url_for('compare_page') }}">← Back to comparison form</a>
+      <a href="{{ url_for('index') }}">← Back to all rats</a>
+    </div>
+  </div>
+</body>
+</html> 

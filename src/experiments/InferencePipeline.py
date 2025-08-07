@@ -12,8 +12,6 @@ from ..evaluation.Trainer import Trainer
 from ..evaluation.RegressionEvaluator import RegressionEvaluator
 from ..utils.traceProps import get_trace_density, get_mean_axon_length, get_axon_count
 
-from ..inference.InferenceManager import InferenceManager
-
 from ..utils.graphs import display_model_bounds, display_model_rmse, \
                                         display_test_bias_for_group, display_inference_points
 from ..utils.graphs import display_inference_bounds

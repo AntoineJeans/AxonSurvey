@@ -4,6 +4,7 @@
 *.pdf
 *.pth
 *.png
+*.jpg
 *.pyc
 __pycache__/
 .vscode/

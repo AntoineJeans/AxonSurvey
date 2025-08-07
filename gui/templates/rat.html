@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Rat Brain GUI - {{ rat_id }}{% if slice_name %} - {{ slice_name }}{% endif %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <div class="container">
+    <h1>🐭 Rat {{ rat_id }}{% if slice_name %} - {{ slice_name }}{% endif %}</h1>
+    
+    {% if metadata %}
+      <div class="metadata">
+        <h2>Metadata</h2>
+        {% for key, value in metadata.items() %}
+          <div class="metadata-item">
+            <span class="metadata-label">{{ key }}:</span> {{ value }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <h2>Available {% if slice_name %}Subregions{% else %}Slices{% endif %}</h2>
+    {% if regions %}
+      <div class="regions-grid">
+        {% for region in regions %}
+          <div class="region-card">
+            {% if slice_name %}
+              <a href="{{ url_for('region_page', rat_id=rat_id, slice_name=slice_name, region=region) }}">{{ region }}</a>
+            {% else %}
+              <a href="{{ url_for('slice_page', rat_id=rat_id, slice_name=region) }}">{{ region }}</a>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p style="color: #6c757d;">No {% if slice_name %}subregions{% else %}slices{% endif %} found.</p>
+    {% endif %}
+    <a href="{{ url_for('index') }}">← Back to all rats</a>
+    <div class="nav-links">
+      {% if slice_name %}
+        <a href="{{ url_for('rat_page', rat_id=rat_id) }}">← Back to rat {{ rat_id }}</a>
+      {% endif %}
+      
+    </div>
+  </div>
+</body>
+</html> 

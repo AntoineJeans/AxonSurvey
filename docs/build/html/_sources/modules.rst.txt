@@ -9,7 +9,7 @@ API Reference
    dataprep
    evaluation
    experiments
-   image_estimators
+   image_extractors
    inference
    imgproc
    NNs
@@ -63,12 +63,12 @@ Image Estimators
    :template: custom-module-template.rst
    :recursive:
 
-   image_estimators.BaseFeatureExtractor
-   image_estimators.BaselineMeanExtractors
-   image_estimators.OtsuExtractors
-   image_estimators.PropertyModel
-   image_estimators.ThresholdDensityExtractor
-   image_estimators.TracerExtractor
+   image_extractors.BaseFeatureExtractor
+   image_extractors.BaselineMeanExtractors
+   image_extractors.OtsuExtractors
+   image_extractors.PropertyModel
+   image_extractors.ThresholdDensityExtractor
+   image_extractors.TracerExtractor
 
 Inference
 ================

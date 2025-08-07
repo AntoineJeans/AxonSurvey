@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Rat Brain GUI - {{ rat_id }} - {{ slice_name }} - {{ region }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <script src="{{ url_for('static', filename='scripts.js') }}"></script>
+</head>
+<body>
+  <div class="container region-page">
+    <h1>🐭 {{ rat_id }} - {{ slice_name }} - {{ region }}</h1>
+    
+    <div class="notes-section">
+      <div class="alert alert-info">
+        <strong>Note:</strong> The shown images have higher luminosity than the original and are displayed at lower resolution for web viewing.
+      </div>
+    </div>
+    
+    <div class="images-container">
+      <!-- Original Image -->
+      <div class="image-section">
+        <h3>Original Image</h3>
+        <div class="image-container">
+          <img src="{{ url_for('static', filename='images/' + image_filename) }}" alt="Original brain region image">
+          <div class="image-buttons">
+            <a href="{{ url_for('static', filename='images/' + image_filename) }}" target="_blank" class="btn btn-primary">Open Image</a>
+            {% if image_dir_path %}
+              <button onclick="copyToClipboard('{{ image_dir_path }}')" class="btn btn-secondary">Copy Directory Path</button>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Segmentation -->
+      {% if has_segmentation %}
+        <div class="image-section">
+          <h3>Segmentation</h3>
+          <div class="image-container">
+            <img src="{{ url_for('static', filename='images/' + segmentation_filename) }}" alt="Segmentation overlay">
+            <div class="image-buttons">
+              <a href="{{ url_for('static', filename='images/' + segmentation_filename) }}" target="_blank" class="btn btn-primary">Open Image</a>
+              {% if seg_dir_path %}
+                <button onclick="copyToClipboard('{{ seg_dir_path }}')" class="btn btn-secondary">Copy Directory Path</button>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      {% endif %}
+
+      <!-- Feature Map -->
+      {% if has_feature_map %}
+        <div class="image-section">
+          <h3>Feature Map</h3>
+          <div class="image-container">
+            <img src="{{ url_for('static', filename='images/' + feature_map_filename) }}" alt="Feature map overlay">
+            <div class="image-buttons">
+              <a href="{{ url_for('static', filename='images/' + feature_map_filename) }}" target="_blank" class="btn btn-primary">Open Image</a>
+              {% if feature_dir_path %}
+                <button onclick="copyToClipboard('{{ feature_dir_path }}')" class="btn btn-secondary">Copy Directory Path</button>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+
+    {% if not has_segmentation and not has_feature_map %}
+      <div class="no-data">
+        <p>No segmentation or feature map data available for this region.</p>
+      </div>
+    {% endif %}
+
+    <div class="nav-links">
+      <a href="{{ url_for('index') }}">← Back to all rats</a>
+      <a href="{{ url_for('rat_page', rat_id=rat_id) }}">← Back to rat</a>
+      <a href="{{ url_for('slice_page', rat_id=rat_id, slice_name=slice_name) }}">← Back to slice</a>
+    </div>
+  </div>
+</body>
+</html>

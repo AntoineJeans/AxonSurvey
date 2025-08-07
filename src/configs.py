@@ -12,7 +12,7 @@ To use variables defined in this file, simply import them as needed:
     from axon_density.survey_estimation.configs import VARIABLE_NAME
 """
 
-from image_estimators.TracerExtractor import TraceExtractor
+from image_extractors.TracerExtractor import TraceExtractor
 from tracers.DLTracer import DLTracer
 from NNs.Unet import UNetModel
 import copy
@@ -82,10 +82,10 @@ ground_truth_functions = [get_axon_count, get_mean_axon_length, get_trace_densit
 feature_names = ["Fibre Count", "Mean Fibre Length", "Foreground Density"]
 
 
-from .image_estimators.BaselineMeanExtractors import PopulationMeanExtractor, ImageMeanExtractor
-from .image_estimators.ThresholdDensityExtractor import ThresholdDensityExtractor
-from .image_estimators.OtsuExtractors import OtsuExtractor
-from src.image_estimators.PropertyModel import PropertyModel
+from .image_extractors.BaselineMeanExtractors import PopulationMeanExtractor, ImageMeanExtractor
+from .image_extractors.ThresholdDensityExtractor import ThresholdDensityExtractor
+from .image_extractors.OtsuExtractors import OtsuExtractor
+from src.image_extractors.PropertyModel import PropertyModel
 
 from sklearn.linear_model import LinearRegression
 

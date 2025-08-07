@@ -77,7 +77,7 @@ projet/
 │   │   └── TracerEval.py        # Tracer-specific evaluation
 │   ├── inference/                # Inference pipeline
 │   │   └── BaseEstimator.py     # Abstract estimator interface
-│   ├── image_estimators/         # Image analysis estimators
+│   ├── image_extractors/         # Image analysis estimators
 │   │   ├── BaseFeatureExtractor.py # Feature extraction interface
 │   │   └── TracerExtractor.py   # Tracer-based feature extraction
 │   ├── experiments/              # Experiment management
@@ -98,7 +98,7 @@ projet/
 - **`tracers/`**: Implements various axon tracing algorithms with a common interface
 - **`evaluation/`**: Provides comprehensive evaluation metrics and benchmarking tools
 - **`inference/`**: Manages the end-to-end inference pipeline
-- **`image_estimators/`**: Feature extraction and analysis components
+- **`image_extractors/`**: Feature extraction and analysis components
 - **`experiments/`**: Experiment configuration and management system
 
 ### 4. Experiments
