@@ -1,74 +1,69 @@
 # This module provides an experiment loader for managing different levels of experimental data organization and validation.
 
 from ..dataprep.TracingChecker import TracingChecker
-from ..dataprep.DataReader import DataReader
+from ..utils.imbalance import imbalance_score
 
-import glob
 import os
 import pathlib 
-from collections import Counter
-
+from pathlib import Path
 
 MINIMUM_ACCEPTABLE_IMAGES = 25
+
 
 class ExperimentLoader:
     """Load and validate experimental data for different levels of analysis."""
     
-    def __init__(self, level, groups, train_path, test_path, unlabeled_dir, val_path=None):
+    def __init__(self, groups, train_path, test_path, raw_images_dir, val_path=None):
         """Initialize experiment loader with data paths and grouping configuration."""
-        # LEVELS : broad -> granular
-        # 0 : estimate density across whole population (maybe compare with rat features like sex), example: what is average density 
-        # groups : [[some set of rats], [some set of other rats], ...]
-        # 1 : estimate density for whole rats, example: Is rat 301 more dense than 302?
-        # groups : [[rat1], [rat2], ....]
-        # 2 : estimate density for sections of brains: Are contrallesionnal sections more dense than ipsi?
-        # groups : [[sets of regions], [sets of other regions], ...]
-        # 3 : estimate density for sections of brains of indiviual rats: 
-        # groups : [[rat1, section1], [rat1, section2], [rat3, section3], ...]
+        # groups is a list of RatGroup that define what to separate for quantification
 
-        self.level = level
         self.groups = groups
         
-        self.train_datasets = self.get_dataset_folders(train_path)
-        self.val_datasets = None if val_path is None else self.get_dataset_folders(val_path)
-        self.test_datasets = self.get_dataset_folders(test_path)
-        self.unlabeled_dir = unlabeled_dir
+        self.train_dataset = self.get_dataset_folders(train_path)
+        self.val_dataset = None if val_path is None else self.get_dataset_folders(val_path)
+        self.test_dataset = self.get_dataset_folders(test_path)
+
+        self.unlabeled_dir = raw_images_dir
+
+        self.inference_paths_for_groups = self.get_inference_paths()
         
     def get_dataset_folders(self, path):
-        """Get valid dataset folders from a given path."""
-        if TracingChecker(path).is_valid(): return [path]
-        elif isinstance(self.dataset_folder, list):
-            all_folders = self.dataset_folder
-        else: 
-            all_folders = [os.path.join(self.test_path, f) for f in os.listdir(self.test_path)]
+        """Get valid image folders from a given "dataset" path. Image folders contain strictly annotated image patches"""
+        all_folders = [os.path.join(self.test_path, f) for f in os.listdir(self.test_path)]
         return [fldr for fldr in all_folders if TracingChecker(fldr).is_valid()]
     
-    
-    def find_all_image_paths_by_region_group(self, datasets):
-        """Find image paths for each region group across datasets."""
-        img_paths = []
-        for region_group in self.groups: 
-            paths_for_group = []
-            for dataset in datasets:
-                tr = TracingChecker(dataset)
-                paths_for_group = paths_for_group + tr.get_img_paths_from_region_group(region_group)
-            img_paths.append(paths_for_group)
-        return img_paths
 
-
-    def imbalance_score(self, sample, potential_values):
-        """Calculate imbalance score for dataset sampling."""
-        counts = Counter(sample)
-        total = len(sample)
-        freqs = [counts[val] / total if val in counts else 0 for val in potential_values]
-        mean_freq = 1 / len(potential_values)
-        # Variance from uniform distribution
-        variance = sum((f - mean_freq) ** 2 for f in freqs) / len(potential_values)
-        # Normalize by max variance (worst case: all in one class)
-        max_variance = (1 - mean_freq)**2 * (1 - 1/len(potential_values))
-        score = variance / max_variance if max_variance != 0 else 0
-        return score  # 0 = perfectly balanced, 1 = maximally imbalanced
-
+    def get_inference_paths(self):
+        all_groups_paths = []
+        
+        for group in self.groups:
+            group_paths = []
+            
+            # Walk through the unlabeled directory structure
+            for rat_id in os.listdir(self.unlabeled_dir):
+                rat_path = os.path.join(self.unlabeled_dir, rat_id)
+                
+                # Check if this is a directory and if rat should be included
+                if os.path.isdir(rat_path) and group.include_rat(rat_id):
+                    
+                    # Walk through slice folders
+                    for slice_name in os.listdir(rat_path):
+                        slice_path = os.path.join(rat_path, slice_name)
+                        
+                        if os.path.isdir(slice_path):
+                            # Walk through region folders
+                            for region_name in os.listdir(slice_path):
+                                region_path = os.path.join(slice_path, region_name)
+                                
+                                # Check if this is a directory and if region should be included
+                                if os.path.isdir(region_path) and group.include_region(region_name):
+                                    # Check if this region folder contains .tif images
+                                    tif_files = [f for f in os.listdir(region_path) if f.lower().endswith(('.tif', '.tiff'))]
+                                    if tif_files:
+                                        group_paths.append(region_path)
+            
+            all_groups_paths.append(group_paths)
+        return all_groups_paths
 
     def get_original_file_from_img_folder(self, img_path):
         """Extract original file path from image folder info."""
@@ -79,77 +74,85 @@ class ExperimentLoader:
     
     def get_experiment_train_data(self):
         """Get training data for the experiment."""
-        return self.get_experiment_data(self.train_datasets)
+        data = self.get_experiment_data(self.train_dataset)
+        self.verify_group_data(data)
+        return data
     
     def get_experiment_val_data(self):
         """Get validation data for the experiment."""
-        return self.get_experiment_data(self.val_datasets)
+        data = self.get_experiment_data(self.val_dataset)
+        self.verify_group_data(data)
+        return data
     
     def get_experiment_test_data(self):
         """Get test data for the experiment."""
-        return self.get_experiment_data(self.test_datasets)
-    
+        data =  self.get_experiment_data(self.test_dataset)
+        self.verify_group_data(data)
+        return data
         
-    def get_experiment_data(self, datasets):
-        """Get experiment data based on analysis level."""
-        dr = DataReader(self.unlabeled_dir)
-        match self.level:
-            case 0:
-                print(f'level {self.level} not implemented yet')
-            case 1:
-                print(f'level {self.level} not implemented yet')
-            case 2:
-                img_paths_for_groups = self.find_all_image_paths_by_region_group(datasets)
-                all_possible_og_files = [dr.get_all_paths_for_regions(grp) for grp in self.groups]
-            case 3:
-                print(f'level {self.level} not implemented yet')
-            case _:
-                print(f'level {self.level} not implemented yet')
-
-
-        for grp, paths, possible_og in zip(self.groups, img_paths_for_groups, all_possible_og_files):
-            if len(paths) < MINIMUM_ACCEPTABLE_IMAGES: raise ValueError(f"region group {grp} only has {len(paths)} tracings... make more!")
-            original_file_for_imgs = [self.get_original_file_from_img_folder(p) for p in paths]
-            imb_score = self.imbalance_score(original_file_for_imgs, possible_og)
-            if imb_score > 0.25: print(f"WARNING: dataset sampling is unbalanced for testing, imb_score = {imb_score}")
-
-        return img_paths_for_groups
     
-    def get_files_from_folders(self, folders, channel):
-        """Get files from folders with optional channel filtering."""
-        all_files = []
-        if channel is None:
-            for og_folder in folders:
-                all_files = all_files + glob.glob(og_folder + r"\*.tif") + glob.glob(og_folder + r"\{channel}.tiff")
-        else: 
-            for og_folder in folders:
-                file_path = os.path.join(og_folder, f"{channel}.tif")
+    def verify_group_data(self, data):
+        for grp, data, possible_og in zip(self.groups, data, self.inference_paths_for_groups):
+            # just a couple of verifications
+            file_for_imgs = [self.get_original_file_from_img_folder(fldr) for fldr in data]
+            region_folder_for_imgs =  [Path(image_path).parent for image_path in file_for_imgs]
+            imb_score = imbalance_score(region_folder_for_imgs, possible_og)
+            
+            if imb_score > 0.25: print(f"WARNING: dataset sampling is unbalanced, imb_score = {imb_score}")
+            if len(data) < MINIMUM_ACCEPTABLE_IMAGES: print(f" WARNING : region group {grp} only has {len(data)} tracings... make more!")
+        return data
+
+        
+    def get_experiment_data(self, dataset):
+        """Get experiment data based on rat groups."""
+
+        rats = self.get_rats_from_folders(dataset)
+        regions = self.get_regions_from_folders(dataset)
+
+        all_groups_data = []
+        for group in self.groups:
+            group_data = []
+            for image_folder, rat, region in zip(dataset, rats, regions):
+                if group.include_rat(rat) and group.include_region(region):
+                    group_data.append(image_folder)
+            all_groups_data.append(group_data)
+        return all_groups_data
+
+
+    def get_rats_from_folders(self, folders):
+        rats = []
+        for fldr in folders:
+            info_file_path = os.path.join(self.root_read_dir, fldr, self.info_file_name)
+            with open(str(info_file_path), "r") as f: lines = f.readlines()         
+            rat = lines[3].strip() if len(lines) > 1 else ""
+            rats.append(rat)
+        return rats
+    
+    def get_regions_from_folders(self, folders):
+        regions = []
+        for fldr in folders:
+            info_file_path = os.path.join(self.root_read_dir, fldr, self.info_file_name)
+            with open(str(info_file_path), "r") as f: lines = f.readlines()         
+            region_line = lines[5].strip() if len(lines) > 1 else ""
+            regions.append(region_line)
+
+        return regions
+            
+    
+    def get_inference_data(self, channel):
+        """Get inference data."""
+        all_inference_images = []
+        for inference_data_group in self.inference_paths_for_groups:
+            group_inference_images = []
+            for region_folder in inference_data_group:
+                file_path = os.path.join(region_folder, f"{channel}.tif")
                 if os.path.exists(file_path):
-                    all_files.append(file_path)
-        return all_files
-    
-    def get_inference_data(self, channel=None):
-        """Get inference data based on analysis level."""
-        # groups : [[sets of regions], [sets of other regions], ...]
-
-        dr = DataReader(self.unlabeled_dir)
-        match self.level:
-            case 0:
-                print(f'level {self.level} not implemented yet')
-            case 1:
-                print(f'level {self.level} not implemented yet')
-            case 2:
-                all_possible_og_files = [dr.get_all_paths_for_regions(grp) for grp in self.groups]
-            case 3:
-                print(f'level {self.level} not implemented yet')
-            case _:
-                print(f'level {self.level} not implemented yet')
-
-        return [self.get_files_from_folders(folder, channel) for folder in all_possible_og_files]
+                    group_inference_images.append(file_path)
+            all_inference_images.append(group_inference_images)
+        return all_inference_images
 
     
 
     
-
 
     

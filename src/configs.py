@@ -12,9 +12,9 @@ To use variables defined in this file, simply import them as needed:
     from axon_density.survey_estimation.configs import VARIABLE_NAME
 """
 
-from image_extractors.TracerExtractor import TraceExtractor
-from tracers.DLTracer import DLTracer
-from NNs.Unet import UNetModel
+from .image_extractors.TracerExtractor import TraceExtractor
+from .tracers.DLTracer import DLTracer
+from .NNs.Unet import UNetModel
 import copy
 import os
 

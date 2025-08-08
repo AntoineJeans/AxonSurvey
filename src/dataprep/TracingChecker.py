@@ -10,8 +10,6 @@ from ..utils.imageio import tif_to_numpy
 
 from ..utils.graphs import display_inference_bounds
 
-
-
 import matplotlib.pyplot as plt
 import seaborn as sns
 

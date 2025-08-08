@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 class InferencePipeline():
     """Complete pipeline for training models, evaluating performance, and making predictions with confidence intervals."""
     
-    def __init__(self, level, groups, img_input_size, 
+    def __init__(self, groups, img_input_size, 
                  og_path, train_path, test_path, val_path=None, 
                  rmse_confidence=0.95, inference_confidence = 0.95, group_labels = None,
                  ground_truth_functions=[get_trace_density], propery_names=["Axon innervation density"],
@@ -32,15 +32,8 @@ class InferencePipeline():
         """Initialize inference pipeline with experiment parameters and configuration."""
         plt.style.use('classic')
 
-        # Options for trace_prop_of_interest are : "Axon Density", "Axon Mean Length", "Axon Count"
-        prop_functions = {
-            "Axon Density" : get_trace_density,
-            "Axon Mean Length" : get_mean_axon_length,
-            "Axon Count" : get_axon_count,
-        }
 
         # STEP 1 - SET EXPERIMENT PARAMETERS
-        self.level = level
         self.groups = groups
         self.n_groups = len(groups)
         
@@ -85,7 +78,7 @@ class InferencePipeline():
     # loads image paths to use from the experiment datasets and saves as attribute as trainers and evaluators for models
     def load_data(self):
         """Load training, validation, test, and inference data for the experiment."""
-        loader = ExperimentLoader(self.level, self.groups, self.train_path, self.test_path, self.og_path, val_path=self.val_path)
+        loader = ExperimentLoader(self.groups, self.train_path, self.test_path, self.og_path, val_path=self.val_path)
         
         # Load training data
         training_data_for_groups = loader.get_experiment_train_data()
