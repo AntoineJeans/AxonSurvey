@@ -73,6 +73,10 @@ class InferencePipeline():
         self.best_model_names = []
         self.expected_rmses = []
 
+        self.experiment_id = 1 # !!! TODO: get id by simply counting existing exps
+        self.experiment_date = 1  # !!! TODO: get current YYYY-MM-DD date
+        self.experiment_id_string = f"experiment_{self.experiment_id}_{self.experiment_date}"
+        
 
     # STEP 2 - LOAD EXPERIMENT DATA
     # loads image paths to use from the experiment datasets and saves as attribute as trainers and evaluators for models
@@ -182,7 +186,7 @@ class InferencePipeline():
             for (expec, lower, upper), property_name in zip(property_bounds, self.propery_names):
                 if display_model_performances: 
                     title = f"{metric_name} scores for {property_name} predictions in {group_label} regions"
-                    save_path = "./figures/model_performances"
+                    save_path = f"./figures/experiment_figures/{self.experiment_id_string}/model_performances"
                     display_model_bounds(expec, lower, upper, name_list, title=title, 
                                          metric_name=metric_name, save_path=save_path, model_types=model_type_list)
                 error_points.append(upper)
@@ -304,23 +308,32 @@ class InferencePipeline():
                 # group_data.append(group_interval)
                 pass
 
+
+        inference_figure_save_path = f"./figures/experiment_figures/{self.experiment_id_string}/inference_results"
         # Now display
         if use_fixed_point_predictions:
             title = f"Predicted densities in sampled regions"
             display_inference_points(group_data, labels=self.group_labels, title=title, 
-                                        save_path="./figures/prediction_intervals/")
+                                        save_path=inference_figure_save_path)
+            
             
         else:
             estimator_names = ["not sure"]
             title = f"Expected axon density in sampled regions, confidence={self.inference_confidence}"
             display_inference_bounds(group_data, labels=self.group_labels, 
                                         title=title, predictor_names = estimator_names, 
-                                        save_path="./figures/prediction_intervals/")
+                                        save_path=inference_figure_save_path)
 
         # self.plot_density_distribution_for_groups(inf_man)
         # if self.debug_mode:
         #     self.plot_density_distribution_for_images(inf_man)
 
+
+    def save_experiment_data(self):
+        # !!! TODO: implement this, maybe just a json for performance data in self and some of the names, groups, inference data? not sure
+
+        # Data is saved in ../experiments/{self.experiment_id_string}/ (maybe just data.json for now) could be multiple json if fits, could be also csv if fits for like multiple models
+        pass
 
     # utils functions for displaying stuff 
     def display_best_models_predictions(self):
@@ -339,7 +352,7 @@ class InferencePipeline():
                 
     def plot_density_distribution_for_groups(self, inference_manager):
         """Plot density distribution for each group."""
-        for og_files, model, name, laWbel in zip(self.inference_data, self.best_models, self.best_model_names, self.group_labels):
+        for og_files, model, name, label in zip(self.inference_data, self.best_models, self.best_model_names, self.group_labels):
             title = f'Predicted density distribution by {name} in {label} regions'
             inference_manager.density_distribution_in_img_list(model, og_files, title)
 

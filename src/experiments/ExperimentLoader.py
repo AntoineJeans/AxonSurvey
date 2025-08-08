@@ -26,11 +26,16 @@ class ExperimentLoader:
         self.unlabeled_dir = raw_images_dir
 
         self.inference_paths_for_groups = self.get_inference_paths()
-        
+
+
+        self.info_file_name = "info.txt"
+                
     def get_dataset_folders(self, path):
         """Get valid image folders from a given "dataset" path. Image folders contain strictly annotated image patches"""
-        all_folders = [os.path.join(self.test_path, f) for f in os.listdir(self.test_path)]
-        return [fldr for fldr in all_folders if TracingChecker(fldr).is_valid()]
+        if TracingChecker(path).is_valid():
+            all_folders = [os.path.join(path, f) for f in os.listdir(path)]
+        else: all_folders = []
+        return all_folders
     
 
     def get_inference_paths(self):
@@ -122,7 +127,7 @@ class ExperimentLoader:
     def get_rats_from_folders(self, folders):
         rats = []
         for fldr in folders:
-            info_file_path = os.path.join(self.root_read_dir, fldr, self.info_file_name)
+            info_file_path = os.path.join(fldr, self.info_file_name)
             with open(str(info_file_path), "r") as f: lines = f.readlines()         
             rat = lines[3].strip() if len(lines) > 1 else ""
             rats.append(rat)
@@ -131,7 +136,7 @@ class ExperimentLoader:
     def get_regions_from_folders(self, folders):
         regions = []
         for fldr in folders:
-            info_file_path = os.path.join(self.root_read_dir, fldr, self.info_file_name)
+            info_file_path = os.path.join(fldr, self.info_file_name)
             with open(str(info_file_path), "r") as f: lines = f.readlines()         
             region_line = lines[5].strip() if len(lines) > 1 else ""
             regions.append(region_line)

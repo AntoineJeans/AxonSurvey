@@ -51,7 +51,7 @@ class ExperimentLoader:
             paths_for_group = []
             for dataset in datasets:
                 tr = TracingChecker(dataset)
-                paths_for_group = paths_for_group + tr.get_img_paths_from_region_group(region_group)
+                paths_for_group = paths_for_group + tr.get_img_paths_from_group(region_group)
             img_paths.append(paths_for_group)
         return img_paths
 

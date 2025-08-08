@@ -8,11 +8,13 @@ seaborn
 pillow
 imageio
 scipy
+
 scikit-image
+scikit-learn
 
-opencv
+opencv-python
 
-sklearn
+
 sphinx
 
 flask

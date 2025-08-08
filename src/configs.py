@@ -20,7 +20,7 @@ import os
 
 
 use_DL_models = True
-use_mixed_models = True
+use_ensemble_extractor_models = False
 
 # img_input_size has to be 128 for those models
 img_input_size = 128
@@ -141,14 +141,14 @@ def make_models(n_groups):
                                   cache_folder=os.path.join(base_cache_path, name)) for extr,name in zip(all_extractors, prop_model_names)]
 
     # Then we try some combinations!
-    if use_mixed_models:
+    if use_ensemble_extractor_models:
         many_simple = "Multiple_simple"
         prop_model_names.append(many_simple)
         prop_models.append(PropertyModel(extractors=baseline_extractors + treshold_extractors, model=LinearRegression(), 
                                     cache_folder=os.path.join(base_cache_path, many_simple)))
         all_types.append("threshold")
 
-    if use_DL_models and use_mixed_models:
+    if use_DL_models and use_ensemble_extractor_models:
         many_tracer_name = "Multiple_tracers"
         prop_model_names.append(many_tracer_name)
         prop_models.append(PropertyModel(extractors=dl_extractors, model=LinearRegression(), 

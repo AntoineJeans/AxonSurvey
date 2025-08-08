@@ -93,6 +93,7 @@ def save_plot(title: str, save_path: Optional[str] = None) -> None:
     """Save plot with consistent naming and high-quality settings."""
     plt.tight_layout()
     if save_path is not None:
+        os.makedirs(save_path, exist_ok=True)
         save_file = os.path.join(save_path, f"{title}.png")
         plt.savefig(save_file, transparent=True, dpi=300, bbox_inches='tight')
     plt.style.use('classic')
@@ -156,8 +157,11 @@ def display_model_bounds(expected: List[float], lower: List[float], upper: List[
         # Format axes with different rotation for compactness
         format_axes(ax, labels, title, f"Expected model {metric_name}", 'light', 20.0)
         plt.grid(True, alpha=0.3)
-    
-    save_plot(title, save_path)
+
+    if save_path:
+        save_plot(title, save_path)
+    else: 
+        plt.show()
 
 def display_inference_bounds(confidence_bounds: List[List[Tuple[float, float, float]]], 
                            labels: List[str], title: str, 
@@ -226,7 +230,10 @@ def display_inference_bounds(confidence_bounds: List[List[Tuple[float, float, fl
     ax.set_ylim(total_minimum * 0.95, total_maximum * 1.05)  # More compact y-axis
     plt.grid(True, alpha=0.2)
     
-    save_plot(title, save_path)
+    if save_path:
+        save_plot(title, save_path)
+    else: 
+        plt.show()
 
 def display_inference_points(group_data: List[List[float]], labels: List[str], 
                            title: str, property_name: str = "Density", 
@@ -274,7 +281,12 @@ def display_inference_points(group_data: List[List[float]], labels: List[str],
     ax.set_xlim(0.5, len(labels) + 0.5)
     plt.grid(True, alpha=0.2)
     
-    save_plot(title, save_path)
+    if save_path:
+        save_plot(title, save_path)
+    else: 
+        plt.show()
+
+
 
 def plot_single_variable_fitness(estimated: List[float], real_property: List[float], 
                                 estimated_name: str = "Estimated Value",

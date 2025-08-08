@@ -125,13 +125,14 @@ class TracingChecker:
             return second_line == file
         return func
     
-    def get_img_from_region_condition(self, regions):
+    def get_img_from_group_condition(self, group):
         """Returns a function to check if an image folder matches a region."""
         def func(fldr):
             info_file_path = os.path.join(self.root_read_dir, fldr, self.info_file_name)
-            with open(str(info_file_path), "r") as f: lines = f.readlines()         
+            with open(str(info_file_path), "r") as f: lines = f.readlines()     
+            rat_line = lines[3].strip() if len(lines) > 1 else ""    
             region_line = lines[5].strip() if len(lines) > 1 else ""
-            return region_line in regions
+            return group.include_rat(rat_line) and group.include_region(region_line)
         return func
     
     def get_imgs_has_tracing_condition(self):
@@ -148,13 +149,15 @@ class TracingChecker:
         fldrs = self.filter_imgs_with_condition(self.get_img_from_file_condition(original_file))
         return [os.path.join(self.root_read_dir, f) for f in fldrs]
     
+    # Not sure about that one, region should be integrated into RatGroups
     def get_img_paths_from_region(self, region):
         """Gets image folder paths for a single region."""
-        return self.get_img_paths_from_region_group([region])
+        return self.get_img_paths_from_group([region])
     
-    def get_img_paths_from_region_group(self, regions):
-        """Gets image folder paths for a group of regions."""
-        fldrs = self.filter_imgs_with_condition(self.get_img_from_region_condition(regions))
+    
+    def get_img_paths_from_group(self, group):
+        """Gets image folder paths for group."""
+        fldrs = self.filter_imgs_with_condition(self.get_img_from_group_condition(group))
         return [os.path.join(self.root_read_dir, f) for f in fldrs]
     
     def get_img_folders_with_tracings(self):    
@@ -179,34 +182,33 @@ class TracingChecker:
         """Gets all original file names for folders with tracings."""
         return [self.get_original_file(fldr) for fldr in self.get_img_folders_with_tracings()]
             
-    def get_ground_truth_for_region_group(self, region_group, ground_truth_function):
+    def get_ground_truth_for_rat_group(self, rat_group, ground_truth_function):
         """Gets axon densities for a group of regions."""
-        paths = self.get_img_paths_from_region_group(region_group)
+        paths = self.get_img_paths_from_group(rat_group)
         tracing_files = [os.path.join(fldr, self.tracing_file_name) for fldr in paths]
         tracing_images = [tif_to_numpy(trace_file, channel_number=0, output_dims=2).astype(bool) for trace_file in tracing_files]
         return [ground_truth_function(tr) for tr in tracing_images]
         
-    def get_p(self, region_groups):
+    def get_p(self, region_groups, ground_truth_function):
         """Computes p-value for density difference between two region groups."""
-        densities_for_groups = [self.get_densities_for_region_group(region_group) for region_group in region_groups]
+        densities_for_groups = [self.get_ground_truth_for_rat_group(region_group, ground_truth_function) for region_group in region_groups]
         statistic, p_value = mannwhitneyu(densities_for_groups[0], densities_for_groups[1], alternative='two-sided')
 
         return p_value
 
 
-    def display_densities_for_groups(self, region_groups, group_labels=None):
+    def display_densities_for_groups(self, region_groups, ground_truth_function, group_labels=None):
         """Displays histograms of axon densities for region groups."""
         
         if group_labels is None: group_labels = [str(grp) for grp in region_groups]
         
-        densities_for_groups = [self.get_densities_for_region_group(region_group) for region_group in region_groups]
+        densities_for_groups = [self.get_ground_truth_for_rat_group(region_group, ground_truth_function) for region_group in region_groups]
         n_counts = len(densities_for_groups[0])
         
         colors = sns.color_palette("Set2", len(densities_for_groups))
         
         bins = 10
         plt.hist(densities_for_groups, bins=bins, label=group_labels, alpha=0.7, histtype='stepfilled', color=colors)
-
 
         plt.legend()
         plt.xlabel("Axon density")
@@ -217,14 +219,14 @@ class TracingChecker:
         plt.grid(True)
         plt.show()
                     
-    def statistical_test_between_groups(self, region_groups, ground_truth_function, alpha = 0.05, 
+    def statistical_test_between_groups(self, rat_groups, ground_truth_function, alpha = 0.05, 
                                         group_labels=None, display_confidence=True, 
                                         n_bootstrap = 1000):
         """Performs statistical test and displays confidence intervals between region groups."""
         
-        if group_labels is None: group_labels = [str(grp) for grp in region_groups]
+        if group_labels is None: group_labels = [grp.group_name for grp in rat_groups]
         
-        densities_for_groups = [self.get_ground_truth_for_region_group(region_group, ground_truth_function) for region_group in region_groups]
+        densities_for_groups = [self.get_ground_truth_for_rat_group(rat_group, ground_truth_function) for rat_group in rat_groups]
         
         for densities, label in zip(densities_for_groups, group_labels):
             print(f"Real density mean in group {label} : {np.mean(densities)}, Std for group is : {np.std(densities)}")
@@ -245,7 +247,7 @@ class TracingChecker:
             display_inference_bounds(confidence_bounds, group_labels, title)
 
             
-        if len(region_groups) == 2:
+        if len(rat_groups) == 2:
             statistic, p_value = mannwhitneyu(densities_for_groups[0], densities_for_groups[1], alternative='two-sided')
 
             # Output result
