@@ -1,6 +1,6 @@
 # Module for training models on rat brain image data with ground truth property extraction.
 
-from .ImageLoader import ImageLoader
+from ..utils.ImageLoader import ImageLoader
 import copy
 import numpy as np
 from ..utils.traceProps import get_trace_density

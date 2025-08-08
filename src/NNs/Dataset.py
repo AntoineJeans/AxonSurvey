@@ -4,7 +4,7 @@ from torchvision import transforms
 from torch.utils.data.dataset import Dataset
 
 
-from ..evaluation.ImageLoader import ImageLoader
+from ..utils.ImageLoader import ImageLoader
 from ..utils.trace_manips import thicken_trace
 
 class AxonDataset(Dataset):

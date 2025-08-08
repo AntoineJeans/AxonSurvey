@@ -5,7 +5,7 @@ import copy
 import os
 from pathlib import Path
 
-from .ImageLoader import ImageLoader
+from ..utils.ImageLoader import ImageLoader
 import matplotlib.pyplot as plt
 
 import random
