@@ -221,8 +221,20 @@ function generateComparison() {
         const regionCheckboxes = document.querySelectorAll(`input[name="regions-${groupNum}"]:checked`);
         
         if (ratCheckboxes.length > 0 && regionCheckboxes.length > 0) {
-            const selectedRats = Array.from(ratCheckboxes).map(cb => cb.value);
-            const selectedRegions = Array.from(regionCheckboxes).map(cb => cb.value);
+            let selectedRats = Array.from(ratCheckboxes).map(cb => cb.value);
+            let selectedRegions = Array.from(regionCheckboxes).map(cb => cb.value);
+            
+            // Check if "All rats" is selected
+            const allRatsCheckbox = document.getElementById(`all-rats-${groupNum}`);
+            if (allRatsCheckbox && allRatsCheckbox.checked) {
+                selectedRats = ['ALL_RATS'];
+            }
+            
+            // Check if "All regions" is selected
+            const allRegionsCheckbox = document.getElementById(`all-regions-${groupNum}`);
+            if (allRegionsCheckbox && allRegionsCheckbox.checked) {
+                selectedRegions = ['ALL_REGIONS'];
+            }
             
             groups.push({
                 groupNum: groupNum,

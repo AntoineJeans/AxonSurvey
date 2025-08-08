@@ -53,8 +53,8 @@ echo.
 start /b python app.py
 
 REM Start Flask and open browser
-echo Starting server and opening browser...
-timeout /t 6 /nobreak
+echo Starting server and opening browser... Forgive the delay, the backend is python
+timeout /t 10 /nobreak
 start "" "firefox.exe" --new-window "http://localhost:5000"
 
 REM This runs after the server stops (Ctrl+C or app closes)

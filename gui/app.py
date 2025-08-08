@@ -431,27 +431,51 @@ def api_compare_groups():
         if len(groups) < 2:
             return jsonify({'error': 'At least 2 groups required for comparison'}), 400
         
-        # !!! TODO: Implement actual comparison logic here
+        # Import RatGroup and constants
+        from src.experiments.RatGroup import RatGroup, ALL_RATS, ALL_REGIONS
+        
+        # Convert form data to RatGroup objects
+        rat_groups = []
+        for group_data in groups:
+            group_num = group_data.get('groupNum')
+            rats = group_data.get('rats', [])
+            regions = group_data.get('regions', [])
+            
+            # Handle "All rats" selection - frontend sends ['ALL_RATS']
+            if rats == ['ALL_RATS']:
+                rats = ALL_RATS
+            
+            # Handle "All regions" selection - frontend sends ['ALL_REGIONS']
+            if regions == ['ALL_REGIONS']:
+                regions = ALL_REGIONS
+            
+            # Create RatGroup object
+            group_name = f"Group {group_num}"
+            rat_group = RatGroup(rats=rats, regions=regions, group_name=group_name)
+            rat_groups.append(rat_group)
+        
+        # !!! TODO: Implement actual comparison logic here using rat_groups
         # This should:
         # 1. Load data for each group's rats and regions
         # 2. Calculate summary statistics
         # 3. Generate comparison visualizations
         # 4. Perform statistical tests
         
-        # Placeholder response
+        # Placeholder response with actual group info
         result = {
             'status': 'success',
             'message': 'Comparison completed (placeholder)',
-            'groups_analyzed': len(groups),
+            'groups_analyzed': len(rat_groups),
             'summary': {
-                'total_rats': sum(len(g.get('rats', [])) for g in groups),
-                'total_regions': sum(len(g.get('regions', [])) for g in groups)
+                'total_rats': sum(len(g.rats) if g.rats != ALL_RATS else len(scan_available_rats()) for g in rat_groups),
+                'total_regions': sum(len(g.regions) if g.regions != ALL_REGIONS else len(Config.PREDEFINED_REGIONS) for g in rat_groups)
             },
             'results': {
                 'statistics': 'Placeholder - statistical analysis would be here',
                 'visualizations': 'Placeholder - graphs would be generated here',
                 'tests': 'Placeholder - statistical tests would be performed here'
-            }
+            },
+            'rat_groups_created': [g.group_name for g in rat_groups]
         }
         
         return jsonify(result)
