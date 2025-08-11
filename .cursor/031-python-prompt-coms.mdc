@@ -1,0 +1,19 @@
+---
+description: Python special formatting commands
+globs: **/*.py
+alwaysApply: false
+---
+
+# Python Coding Rules
+
+Trigger only if prompt contains explicit keywords:
+
+## Commands
+- **"quick test"** → Ignore all previous prompts and best practices; write minimal WORKING ugly code; add comment `&&& bad code`. JUST MAKE IT WORK AT ALL COSTS!!
+- **"asserts"** → Add simple one-line pre/postcondition `assert` statements.
+- **"feedback"** → Add sparse comments:
+  - Uncertainty → `???`
+  - Critical mistake → `!?!`
+  - Optional TODO → `$$$ TODO:`
+  - Critical TODO → `!!! TODO:`
+  - If prompt describe wanted feedback e.g. "LOTS of extensive feedback" → adjust comment quantity and descriptivity accordingly.

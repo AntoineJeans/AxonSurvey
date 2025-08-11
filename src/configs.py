@@ -19,7 +19,7 @@ import copy
 import os
 
 
-use_DL_models = True
+use_DL_models = False
 use_ensemble_extractor_models = False
 
 # img_input_size has to be 128 for those models
@@ -69,7 +69,6 @@ if use_DL_models:
 
 from .tracers.DeterministicTracer import DeterministicTracer
 from .imgproc.pipeline_instances import edge_skeleton_pipeline, xTreme_skeleton_pipeline
-
 
 other_tracers_extractor_names = ["NS_edge", "NS_Xedge"]
 other_tracers = [

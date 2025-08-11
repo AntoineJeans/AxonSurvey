@@ -7,7 +7,17 @@
 </head>
 <body>
   <div class="container">
-    <h1>🐭 Available Rats</h1>
+    <div class="header">
+      <div class="header-content">
+        <h1 class="main-title">AxonSurvey GUI</h1>
+        <div class="header-nav">
+          <a href="{{ url_for('compare_page') }}">Compare Rats</a>
+          <a href="{{ url_for('quicktrace_page') }}">Quick Trace</a>
+        </div>
+      </div>
+    </div>
+    
+    <h2>🐭 Available Rats</h2>
     
     {% if rats %}
       <div class="rats-grid">
@@ -21,10 +31,30 @@
       <p style="text-align: center; color: #6c757d;">No rats found in the data directory.</p>
     {% endif %}
 
-    <div class="nav-links">
-      <a href="{{ url_for('compare_page') }}">Compare Rats</a>
-      <a href="{{ url_for('quicktrace_page') }}">Quick Trace</a>
-    </div>
+    <h2 style="margin-top: 2rem;">🧪 Previous Experiments</h2>
+    
+    {% if experiments %}
+      <div class="experiments-grid">
+        {% for experiment in experiments %}
+          <div class="experiment-card">
+            <a href="{{ url_for('experiment_page', experiment_id=experiment.experiment_id) }}">
+              <h3>Experiment {{ experiment.experiment_id }}</h3>
+              {% if experiment.experiment_name %}
+                <p class="experiment-name">{{ experiment.experiment_name }}</p>
+              {% endif %}
+              {% if experiment.experiment_date %}
+                <p class="experiment-date">{{ experiment.experiment_date }}</p>
+              {% endif %}
+              {% if experiment.experimenter_name %}
+                <p class="experimenter">{{ experiment.experimenter_name }}</p>
+              {% endif %}
+            </a>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p style="text-align: center; color: #6c757d;">No experiments found in the experiments directory.</p>
+    {% endif %}
   </div>
 </body>
 </html> 

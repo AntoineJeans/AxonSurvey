@@ -27,7 +27,6 @@ class ExperimentLoader:
 
         self.inference_paths_for_groups = self.get_inference_paths()
 
-
         self.info_file_name = "info.txt"
                 
     def get_dataset_folders(self, path):
@@ -67,7 +66,11 @@ class ExperimentLoader:
                                     if tif_files:
                                         group_paths.append(region_path)
             
+            if group_paths == []: raise ValueError(f"Didn't find any annotated images for RatGroup: {group.tostring()}. Redefine your group or include new data.")
+
             all_groups_paths.append(group_paths)
+
+
         return all_groups_paths
 
     def get_original_file_from_img_folder(self, img_path):

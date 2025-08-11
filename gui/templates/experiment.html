@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Rat Brain GUI - Experiment {{ (data and data.experiment_id) or experiment_id }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  
+</head>
+<body>
+  <div class="container comparison-page">
+    <h1>🧪 Experiment {{ (data and data.experiment_id) or experiment_id }}</h1>
+
+    <div class="comparison-info">
+      <div class="metadata-item">
+        <span class="metadata-label">Experiment ID:</span>
+        {{ (data and data.experiment_id) or experiment_id or 'N/A' }}
+      </div>
+      <div class="metadata-item">
+        <span class="metadata-label">Experiment Name:</span>
+        {{ data.experiment_name if data and data.experiment_name else 'N/A' }}
+      </div>
+      <div class="metadata-item">
+        <span class="metadata-label">Experimenter:</span>
+        {{ data.experimenter_name if data and data.experimenter_name else 'N/A' }}
+      </div>
+      <div class="metadata-item">
+        <span class="metadata-label">Experiment Date:</span>
+        {{ data.experiment_date if data else 'N/A' }}
+      </div>
+    </div>
+
+    <section>
+      <h2>📊 Comparison Groups</h2>
+      {% if data and data.groups %}
+        {% for group in data.groups %}
+          <div class="metadata" style="margin-bottom: 1rem;">
+            <h3>{{ group.name or ('Group ' ~ loop.index) }}</h3>
+            <div class="metadata-item">
+              <span class="metadata-label">Rats:</span>
+              {% if group.rats %}{{ group.rats | join(', ') }}{% else %}N/A{% endif %}
+            </div>
+            <div class="metadata-item">
+              <span class="metadata-label">Regions:</span>
+              {% if group.regions %}{{ group.regions | join(', ') }}{% else %}N/A{% endif %}
+            </div>
+            <details>
+              <summary><strong>Associated ROIs</strong></summary>
+              {% if group.roi_associations %}
+                <ul>
+                  {% for roi_path, density in group.roi_associations.items() %}
+                    <li><code>{{ roi_path }}</code>: {{ density }}</li>
+                  {% endfor %}
+                </ul>
+              {% else %}
+                <p class="no-data">No ROI associations.</p>
+              {% endif %}
+            </details>
+          </div>
+        {% endfor %}
+      {% else %}
+        <p class="no-data">No groups defined.</p>
+      {% endif %}
+    </section>
+
+    <section>
+      <h2>🧠 Inference Results</h2>
+      {% if data and data.main_inference_image %}
+        <div class="comparison-image" style="background-color: #2a2a2a; padding: 10px; border-radius: 8px; display: inline-block;">
+          <img src="{{ url_for('static', filename=data.main_inference_image) }}" alt="Main inference results image" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 5px;">
+          <div class="image-buttons">
+            <a class="btn btn-primary" href="{{ url_for('static', filename=data.main_inference_image) }}" target="_blank">Open Image</a>
+          </div>
+        </div>
+      {% else %}
+        <p class="no-data">No main inference image available.</p>
+        <p class="no-data">Expected path: /figures/experiment_figures/{{ (data and data.experiment_id) or experiment_id }}/inference_results/*.png</p>
+      {% endif %}
+
+      {% if data and data.groups %}
+        {% for group in data.groups %}
+          <details>
+            <summary><strong>Details for {{ group.name or ('Group ' ~ loop.index) }}</strong></summary>
+            <div class="metadata" style="margin-top: 1rem;">
+              <div class="metadata-item">
+                <span class="metadata-label">Average density:</span>
+                {{ group.average_density if group.average_density is not none else 'N/A' }}
+              </div>
+              <div class="metadata-item">
+                <span class="metadata-label">Model:</span>
+                {{ group.model_name or 'N/A' }}
+              </div>
+              <div class="metadata-item">
+                <span class="metadata-label">Expected RMSE:</span>
+                {{ group.expected_rmse if group.expected_rmse is not none else 'N/A' }}
+              </div>
+              <details>
+                <summary><strong>ROI Associations</strong></summary>
+                {% if group.roi_associations %}
+                  <ul>
+                    {% for roi_path, density in group.roi_associations.items() %}
+                      <li><code>{{ roi_path }}</code>: {{ density }}</li>
+                    {% endfor %}
+                  </ul>
+                {% else %}
+                  <p class="no-data">No ROI associations.</p>
+                {% endif %}
+              </details>
+            </div>
+          </details>
+        {% endfor %}
+      {% endif %}
+    </section>
+
+    <section>
+      <h2>📈 Additional Information</h2>
+      {% if data and data.model_performance_images %}
+        <div class="images-container">
+          {% for img_path in data.model_performance_images %}
+            <div class="comparison-image" style="background-color: #2a2a2a; padding: 10px; border-radius: 8px; display: inline-block; margin: 10px;">
+              <img src="{{ url_for('static', filename=img_path) }}" alt="Model performance image {{ loop.index }}" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 5px;">
+              <div class="image-buttons">
+                <a class="btn btn-primary" href="{{ url_for('static', filename=img_path) }}" target="_blank">Open Image</a>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="no-data">No model performance images available.</p>
+      {% endif %}
+    </section>
+
+    <div class="nav-links">
+      <a href="{{ url_for('index') }}">← Back to all rats</a>
+      <a href="{{ url_for('compare_page') }}">← Back to compare</a>
+    </div>
+  </div>
+</body>
+</html>

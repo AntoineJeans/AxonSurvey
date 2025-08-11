@@ -1,0 +1,17 @@
+---
+description: GUI modification guidelines
+globs: /gui/**
+alwaysApply: false
+---
+# GUI Development Rules
+
+Expose `src` codebase features to non-technical users via a simple interface.
+
+## Frontend
+- Keep UI clear and minimal.
+- Use minimal HTML/CSS; store CSS in the correct file (default: `styles.css`).
+  
+## Backend / API
+- API coordinates only high-level logic from `src`.
+- Favor simplicity.
+- Follow standard Flask setup.

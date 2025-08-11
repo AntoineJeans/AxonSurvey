@@ -1,6 +1,9 @@
 from collections import Counter
 def imbalance_score(sample, potential_values):
     """Calculate imbalance score for dataset sampling."""
+
+    if len(potential_values) == 0 : raise ValueError("imbalance scores potential_values can't be empty")
+
     counts = Counter(sample)
     total = len(sample)
     freqs = [counts[val] / total if val in counts else 0 for val in potential_values]

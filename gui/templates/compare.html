@@ -13,6 +13,21 @@
       <strong>Instructions:</strong> Create comparison groups by selecting rats and regions. Each group can contain multiple rats and regions. Define at least 2 groups to generate a comparison.
     </div>
 
+    <!-- Experiment Metadata -->
+    <div class="experiment-metadata">
+      <h3>📋 Experiment Information</h3>
+      <div class="metadata-fields">
+        <div class="field-group">
+          <label for="experiment_name">Experiment Name:</label>
+          <input type="text" id="experiment_name" name="experiment_name" placeholder="Enter experiment name" required>
+        </div>
+        <div class="field-group">
+          <label for="experimenter_name">Experimenter Name:</label>
+          <input type="text" id="experimenter_name" name="experimenter_name" placeholder="Enter experimenter name" required>
+        </div>
+      </div>
+    </div>
+
     <!-- Group Tabs -->
     <div class="group-tabs" id="groupTabs">
       <div class="group-tab active" data-group="1">Group 1</div>
@@ -21,6 +36,13 @@
     <!-- Group Contents -->
     <div id="groupContents">
       <div class="group-content active" data-group="1">
+        <div class="group-name-section">
+          <h3>📝 Group Name</h3>
+          <div class="field-group">
+            <input type="text" id="group-name-1" name="group-name-1" placeholder="Enter group name" value="Group 1">
+          </div>
+        </div>
+        
         <div class="selector-section">
           <h3>🐭 Rats Selector</h3>
           <div class="checkbox-list">
@@ -73,6 +95,7 @@
       <div class="loading-spinner" id="loadingSpinner" style="display: none;">
         <div class="spinner"></div>
         <p>Processing comparison...</p>
+        <p>It could take a while.</p>
       </div>
     </div>
 

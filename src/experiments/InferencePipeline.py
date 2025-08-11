@@ -4,6 +4,10 @@ import numpy as np
 import copy
 from scipy import stats
 
+import json
+from pathlib import Path
+from datetime import datetime
+
 from .ExperimentLoader import ExperimentLoader
 
 from ..configs import make_models
@@ -73,24 +77,38 @@ class InferencePipeline():
         self.best_model_names = []
         self.expected_rmses = []
 
-        self.experiment_id = 1 # !!! TODO: get id by simply counting existing exps
-        self.experiment_date = 1  # !!! TODO: get current YYYY-MM-DD date
-        self.experiment_id_string = f"experiment_{self.experiment_id}_{self.experiment_date}"
+        self.experiment_id = self._get_next_experiment_id()
+        self.experiment_date = datetime.now().strftime("%Y-%m-%d")
+        self.experiment_id_string = self.experiment_id
         
+        # Experiment metadata
+        self.experiment_name = None
+        self.experimenter_name = None
+        
+    def _get_next_experiment_id(self):
+        """Get the next experiment ID by counting existing experiments."""
+        experiments_dir = Path("./experiments")
+        if not experiments_dir.exists():
+            return "0001"
+        
+        # Count existing experiment directories
+        existing_experiments = [d for d in experiments_dir.iterdir() if d.is_dir() and d.name.isdigit()]
+        next_id = len(existing_experiments) + 1
+        return f"{next_id:04d}"
 
     # STEP 2 - LOAD EXPERIMENT DATA
     # loads image paths to use from the experiment datasets and saves as attribute as trainers and evaluators for models
     def load_data(self):
         """Load training, validation, test, and inference data for the experiment."""
-        loader = ExperimentLoader(self.groups, self.train_path, self.test_path, self.og_path, val_path=self.val_path)
+        self.loader = ExperimentLoader(self.groups, self.train_path, self.test_path, self.og_path, val_path=self.val_path)
         
         # Load training data
-        training_data_for_groups = loader.get_experiment_train_data()
+        training_data_for_groups = self.loader.get_experiment_train_data()
         
         self.trainers = [Trainer(train_paths, ground_truth_functions=self.ground_truth_functions) for train_paths in training_data_for_groups]
 
         # Load validation/testing data
-        test_data = loader.get_experiment_test_data()
+        test_data = self.loader.get_experiment_test_data()
         self.test_evaluators = [
             RegressionEvaluator(image_paths=paths, tracings_cache_folder=None, 
                                 estimated_names=self.propery_names, ground_truth_functions=self.ground_truth_functions) 
@@ -99,11 +117,11 @@ class InferencePipeline():
 
         
         if self.val_path is not None:
-            val_data = loader.get_experiment_val_data()
+            val_data = self.loader.get_experiment_val_data()
             self.val_evaluators = [RegressionEvaluator(image_paths=paths, estimated_name=self.trace_prop_of_interest, ground_truth_function=self.prop_function) for paths in val_data]
             
         # Load inference data (large images whose density we want to estimate)
-        self.inference_data = loader.get_inference_data(channel="th")
+        self.inference_data = self.loader.get_inference_data(channel="th")
 
         
         
@@ -225,7 +243,7 @@ class InferencePipeline():
         return all_bounds
         
 
-    # STEP 5 - DEDUCE RMSE AND BIAS ON MODELS 
+    # STEP 5 - DEDUCE RMSE ON MODELS 
     def calculate_model_uncertainty(self, n_bootstrap, use_upper_bound=False):
         """Calculate model uncertainty using bootstrap trials."""
         self.expected_rmses = self.get_best_models_rmses(n_bootstrap, use_upper_bound)
@@ -238,8 +256,12 @@ class InferencePipeline():
 
         error_points = []
         for (expec, lower, upper), prop_name in zip(all_bounds, self.propery_names):           
+            
             labels = [f" {name} on {label}" for name,label in zip(self.best_model_names, self.group_labels) ]
-            display_model_bounds(expec, lower, upper, labels, title=f"RMSE for {prop_name} by best model in each region type, confidence={self.rmse_confidence}", metric_name="RMSE")
+            title=f"RMSE for {prop_name} by best model in each region type, confidence={self.rmse_confidence}"
+            save_path = f"./figures/experiment_figures/{self.experiment_id_string}/model_performances/"
+            display_model_bounds(expec, lower, upper, labels, save_path=save_path,
+                                title=title, metric_name="RMSE")
         
             if use_upper_bound:
                 error_points.append(upper)
@@ -250,16 +272,15 @@ class InferencePipeline():
         rmses = [evaluator.combine_rmses(errors) for errors, evaluator in zip(error_points, self.test_evaluators)]
         return rmses
 
-    def get_best_models_biases(self, n_bootstraps_trials, use_upper_bound=True):
-        """Get bias for best models using bootstrap trials."""
-        bootstrap_func = lambda evaluator, model : evaluator.bootstrap_bias(model, n_bootstraps_trials) 
-        expec, lower, upper = self.bootstrap_model_list(self.best_models, self.test_evaluators, bootstrap_func)            
-        labels = [f" {name} on {label}" for name,label in zip(self.best_model_names, self.group_labels) ]
-        display_model_bounds(expec, lower, upper, labels, title=f"BIAS by best model in each region type, confidence={self.rmse_confidence}", metric_name="BIAS")
-        return upper if use_upper_bound else expec
+    # def get_best_models_biases(self, n_bootstraps_trials, use_upper_bound=True):
+    #     """Get bias for best models using bootstrap trials."""
+    #     bootstrap_func = lambda evaluator, model : evaluator.bootstrap_bias(model, n_bootstraps_trials) 
+    #     expec, lower, upper = self.bootstrap_model_list(self.best_models, self.test_evaluators, bootstrap_func)            
+    #     labels = [f" {name} on {label}" for name,label in zip(self.best_model_names, self.group_labels) ]
+    #     display_model_bounds(expec, lower, upper, labels, title=f"BIAS by best model in each region type, confidence={self.rmse_confidence}", metric_name="BIAS")
+    #     return upper if use_upper_bound else expec
     
 
-    
     # STEP 6 - INFER ON THE REGIONS WE CARE ABOUT
     def infer_mean_region_density_in_groups(self):
         """Infer mean region density for each group with confidence intervals."""
@@ -328,12 +349,128 @@ class InferencePipeline():
         # if self.debug_mode:
         #     self.plot_density_distribution_for_images(inf_man)
 
+        self.group_ROI_points = group_data
+
+
+    def _convert_numpy_types(self, obj):
+        """Convert numpy types to JSON-serializable types."""
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif isinstance(obj, dict):
+            return {key: self._convert_numpy_types(value) for key, value in obj.items()}
+        elif isinstance(obj, list):
+            return [self._convert_numpy_types(item) for item in obj]
+        else:
+            return obj
 
     def save_experiment_data(self):
-        # !!! TODO: implement this, maybe just a json for performance data in self and some of the names, groups, inference data? not sure
+        """Save experiment data to JSON file with all available information."""
+        
+        # Get dataset information
+        n_training_samples = sum(len(trainer.loader.image_paths) for trainer in self.trainers) if self.trainers else 0
+        n_testing_samples = sum(len(evaluator.loader.image_paths) for evaluator in self.test_evaluators) if self.test_evaluators else 0
+        n_validation_samples = sum(len(evaluator.loader.image_paths) for evaluator in self.val_evaluators) if self.val_evaluators else 0
+        
 
-        # Data is saved in ../experiments/{self.experiment_id_string}/ (maybe just data.json for now) could be multiple json if fits, could be also csv if fits for like multiple models
-        pass
+        # Extract and deduplicate studied data using list comprehensions
+        
+        # Check if any group has ALL_RATS or ALL_REGIONS
+        has_all_rats = any(group.rats == "ALL_RATS" for group in self.groups)
+        has_all_regions = any(group.regions == "ALL_REGIONS" for group in self.groups)
+        
+        if has_all_rats:
+            studied_rats = np.array(["ALL_RATS"])
+        else:
+            studied_rats = np.unique([rat for group in self.groups for rat in group.rats])
+            
+        if has_all_regions:
+            studied_regions = np.array(["ALL_REGIONS"])
+        else:
+            studied_regions = np.unique([region for group in self.groups for region in group.regions])
+            
+        studied_ROI_paths = np.unique([path for paths in self.loader.inference_paths_for_groups for path in paths])
+
+
+        # Build groups data
+        groups_data = []
+        for i, (group, group_label, best_model_name, expected_rmse, 
+                model_names, model_types, model_rmses,
+                inference_data, inferred_ROI_points) in enumerate(zip(
+            self.groups, self.group_labels, self.best_model_names, self.expected_rmses,
+            self.model_names, self.model_types, self.model_rmses, self.loader.inference_paths_for_groups, self.group_ROI_points
+        )):
+            
+            # Get average density from inference if available
+            average_density = np.nanmean(inferred_ROI_points)
+            roi_associations = {}
+            
+            for file, point in zip(inference_data, inferred_ROI_points):
+                roi_associations[file] = point
+
+
+            # Build models data for this group
+            models_data = []
+            
+            for j, (model_name, model_rmse) in enumerate(zip(model_names, model_rmses)):
+                model_type = model_types[j] if model_types is not None else None
+                
+                models_data.append({
+                    "model_name": model_name,
+                    "model_type": model_type,
+                    "model_rmse": float(model_rmse) if model_rmse is not None else None,
+                })
+            
+            group_data = {
+                "name": group_label,
+                "rats": ["ALL_RATS"] if group.rats == "ALL_RATS" else group.rats,
+                "regions": ["ALL_REGIONS"] if group.regions == "ALL_REGIONS" else group.regions,
+                "best_model_name": best_model_name,
+                "expected_rmse": float(expected_rmse) if expected_rmse is not None else None,
+                "average_density": average_density,
+                "roi_associations": roi_associations,
+                "models": models_data
+            }
+            groups_data.append(group_data)
+        
+        comparison_results_data = {
+            "experiment_id": self.experiment_id,
+            "experiment_date": self.experiment_date,
+            "experiment_name" : self.experiment_name,
+            "experimenter_name": self.experimenter_name,
+
+            "datasets": {
+                "training_dataset_path": str(self.train_path) if self.train_path else None,
+                "n_training_samples": n_training_samples,
+                "testing_dataset_path": str(self.test_path) if self.test_path else None,
+                "n_testing_samples": n_testing_samples,
+                "validation_dataset_path": str(self.val_path) if self.val_path else None,
+                "n_validation_samples": n_validation_samples,
+            },
+
+            "studied_regions": {
+                "all_rats": studied_rats.tolist(),  # Convert numpy arrays to lists for JSON serialization
+                "all_region_types": studied_regions.tolist(),
+                "all_ROI_paths": studied_ROI_paths.tolist()
+            },
+
+            "groups": groups_data,
+        }
+
+        # Convert all numpy types to JSON-serializable types
+        comparison_results_data = self._convert_numpy_types(comparison_results_data)
+
+        file_path = f"./experiments/{self.experiment_id}/data.json"
+        path = Path(file_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("w", encoding="utf-8") as f:
+            json.dump(comparison_results_data, f, indent=2, ensure_ascii=False)
+
+
+
 
     # utils functions for displaying stuff 
     def display_best_models_predictions(self):

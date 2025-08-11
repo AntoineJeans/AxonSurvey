@@ -36,8 +36,8 @@
     {% else %}
       <p style="color: #6c757d;">No {% if slice_name %}subregions{% else %}slices{% endif %} found.</p>
     {% endif %}
-    <a href="{{ url_for('index') }}">← Back to all rats</a>
     <div class="nav-links">
+      <a href="{{ url_for('index') }}">← Back to all rats</a>
       {% if slice_name %}
         <a href="{{ url_for('rat_page', rat_id=rat_id) }}">← Back to rat {{ rat_id }}</a>
       {% endif %}

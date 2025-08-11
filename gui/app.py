@@ -4,27 +4,17 @@
 Web app frontend to explore structured rat brain image datasets and interact 
 with existing segmentation + feature map models. Built for non-technical local users.
 
-🚨 Critical TODOs to Complete:
-Processing logic: Implement actual segmentation and feature extraction
-Comparison plots: Implement matplotlib-based statistical comparisons
-
 """
+import matplotlib
+matplotlib.use('Agg')
 
+import traceback
 
 import os
-import json
 from pathlib import Path
 from typing import List, Dict, Optional, Tuple
 from flask import Flask, render_template, request, redirect, url_for, jsonify, send_file
 import logging
-from PIL import Image, ImageEnhance
-import io
-from config import Config
-
-import base64
-
-from werkzeug.utils import secure_filename
-from io import BytesIO
 
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -32,6 +22,16 @@ from src.utils.imageio import numpy_to_tif, tif_to_numpy
 from src.tracers.DLTracer import DLTracer
 from src.NNs.Unet import UNetModel
 from src.utils.imageio import generate_image_outer_mask
+from src.experiments.RatGroup import RatGroup, ALL_RATS, ALL_REGIONS
+
+from config import Config
+from modules.run_quantification import run_quantification
+from modules.data_navigation import scan_available_rats, get_rat_regions, \
+                            get_rat_subregions, get_rat_metadata, get_directories_with_tif_images, \
+                            scan_available_experiments
+from modules.data_loading import convert_tif_to_jpg_and_save, validate_safe_path, \
+                        get_region_cached_path, get_cached_segmentation_path, \
+                        get_cached_feature_map_path, get_comparison_data
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -39,233 +39,13 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-
-def validate_safe_path(base_path: Path, *path_components: str) -> Optional[Path]:
-    """
-    Validate that a path is safe and within the base directory
-    
-    Args:
-        base_path: The base directory that paths must be within
-        *path_components: Path components to join
-        
-    Returns:
-        Path if safe, None if unsafe
-    """
-    try:
-        # Join the path components
-        full_path = base_path.joinpath(*path_components)
-        
-        # Resolve to absolute path to prevent path traversal
-        resolved_path = full_path.resolve()
-        base_resolved = base_path.resolve()
-        
-        # Check if the resolved path is within the base directory
-        if not str(resolved_path).startswith(str(base_resolved)):
-            logger.warning(f"Path traversal attempt detected: {full_path}")
-            return None
-            
-        return full_path
-    except (ValueError, RuntimeError) as e:
-        logger.warning(f"Invalid path components: {path_components}, error: {e}")
-        return None
-
-
-def scan_available_rats() -> List[str]:
-    """
-    Scan the data directory for available rat folders
-    
-    Returns:
-        List of rat IDs found in the data directory
-    """
-    rats = []
-    if Config.DATA_DIR.exists():
-        for item in Config.DATA_DIR.iterdir():
-            if item.is_dir():
-                rats.append(item.name)
-    logger.info(f"Found {len(rats)} rats: {rats}")
-    return rats
-
-def get_rat_regions(rat_id: str) -> List[str]:
-    """
-    Get available regions for a specific rat
-    
-    Args:
-        rat_id: The rat identifier
-        
-    Returns:
-        List of region names for the rat
-    """
-    rat_dir = validate_safe_path(Config.DATA_DIR, rat_id)
-    regions = []
-    if rat_dir and rat_dir.exists():
-        for item in rat_dir.iterdir():
-            if item.is_dir():
-                regions.append(item.name)
-    logger.info(f"Found {len(regions)} regions for rat {rat_id}: {regions}")
-    return regions
-
-
-def get_rat_subregions(rat_id: str, slice_name : str) -> List[str]:
-    """
-    Get available subregions for a specific rat_id + slice_name (bregma)
-    
-    Args:
-        rat_id: The rat identifier
-        
-    Returns:
-        List of region names for the rat
-    """
-    rat_dir = validate_safe_path(Config.DATA_DIR, rat_id, slice_name)
-    regions = []
-    if rat_dir and rat_dir.exists():
-        for item in rat_dir.iterdir():
-            if item.is_dir():
-                regions.append(item.name)
-    logger.info(f"Found {len(regions)} regions for rat {rat_id}: {regions}")
-    return regions
-
-def get_rat_metadata(rat_id: str) -> Optional[Dict]:
-    """
-    Load metadata for a specific rat
-    
-    Args:
-        rat_id: The rat identifier
-        
-    Returns:
-        Dictionary containing metadata or None if not found
-    """
-    metadata_file = validate_safe_path(Config.DATA_DIR, rat_id, Config.METADATA_FILE)
-    if metadata_file and metadata_file.exists():
-        try:
-            with open(metadata_file, 'r') as f:
-                return json.load(f)
-        except json.JSONDecodeError:
-            logger.error(f"Invalid JSON in metadata file: {metadata_file}")
-    return None
-
-def find_image_file(rat_id: str, slice : str, region: str) -> Optional[Path]:
-    """
-    Find the image file for a specific rat and region
-    
-    Args:
-        rat_id: The rat identifier
-        region: The region name
-        
-    Returns:
-        Path to the image file or None if not found
-    """
-    
-    # Validate path is safe
-    region_dir = validate_safe_path(Config.DATA_DIR, rat_id, slice, region)
-    if not region_dir or not region_dir.exists():
-        return None
-        
-    for pattern in Config.IMAGE_PATTERNS:
-        for file_path in region_dir.glob(pattern):
-            if file_path.is_file():
-                return file_path
-    return None
-
-def get_region_cached_path(rat_id: str, slice_name: str, region: str) -> Optional[Path]:
-    """Get cached path with validation"""
-    return validate_safe_path(Config.CACHE_DIR, Config.USED_SEGMENTATION_MODEL_NAME, rat_id, slice_name, region)
-
-def get_cached_segmentation_path(rat_id: str, slice_name: str, region: str) -> Optional[Path]:
-    """Get the path where segmentation should be cached"""
-    base_path = get_region_cached_path(rat_id, slice_name, region)
-    if not base_path:
-        return None
-    return base_path / f"{Config.USED_SEGMENTATION_MODEL_NAME}.tif"
-
-def get_cached_feature_map_path(rat_id: str, slice_name: str, region: str) -> Optional[Path]:
-    """Get the path where feature map should be cached"""
-    base_path = get_region_cached_path(rat_id, slice_name, region)
-    if not base_path:
-        return None
-    feature_file_name = f"Fibre Count for {Config.USED_SEGMENTATION_MODEL_NAME} trace.tif"
-    return base_path / feature_file_name
-
-
-def convert_tif_to_jpg_and_save(tif_path: Path, output_filename: str, lumin_scale=5.0, use_raw_path=False) -> Optional[str]:
-    """
-    Convert a TIF file to JPG and save it in static/images directory
-    Resizes images to fit within 1080p (1920x1080) while maintaining aspect ratio
-   
-    Args:
-        tif_path: Path to the TIF file
-        output_filename: Name for the output JPG file
-       
-    Returns:
-        Filename of the saved JPG file or None if conversion failed
-    """
-    try:
-        if not tif_path.exists():
-            logger.warning(f"TIF file not found: {tif_path}")
-            return None
-           
-        # Open the TIF image
-        with Image.open(tif_path) as img:
-            # Convert to RGB if necessary (TIF might be grayscale or other format)
-            if img.mode not in ('RGB', 'L'):
-                img = img.convert('RGB')
-            elif img.mode == 'L':
-                img = img.convert('RGB')
-            
-            # Resize to fit within 1080p bounds while maintaining aspect ratio
-            max_width = 1920
-            max_height = 1080
-            
-            # Calculate current dimensions
-            width, height = img.size
-            
-            # Only resize if image exceeds 1080p bounds
-            if width > max_width or height > max_height:
-                # Calculate scaling ratios
-                width_ratio = max_width / width
-                height_ratio = max_height / height
-                
-                # Use the smaller ratio to ensure both dimensions fit
-                scale_ratio = min(width_ratio, height_ratio)
-                
-                # Calculate new dimensions
-                new_width = int(width * scale_ratio)
-                new_height = int(height * scale_ratio)
-                
-                # Resize the image using high-quality resampling
-                img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
-
-
-            enhancer = ImageEnhance.Brightness(img)
-            img = enhancer.enhance(lumin_scale)
-           
-            if not use_raw_path:
-                # Create static/images directory if it doesn't exist
-                static_images_dir = Path("static/images")
-                static_images_dir.mkdir(parents=True, exist_ok=True)
-            
-                # Save as JPG
-                image_path = static_images_dir / output_filename
-                img.save(image_path, 'JPEG', quality=85)
-            else:
-                img.save(output_filename, 'JPEG', quality=85)
-           
-            # Return just the filename for url_for() usage
-            print(output_filename)
-            return output_filename
-           
-    except Exception as e:
-        logger.error(f"Error converting TIF to JPG: {e}")
-        return None
-
-
 # Flask routes
 @app.route('/')
 def index():
-    """Index page - shows list of available rats"""
+    """Index page - shows list of available rats and experiments"""
     rats = scan_available_rats()
-    return render_template('index.html', rats=rats)
-
-
+    experiments = scan_available_experiments()
+    return render_template('index.html', rats=rats, experiments=experiments)
 
 
 @app.route('/quicktrace', methods=['GET', 'POST'])
@@ -386,26 +166,20 @@ def region_page(rat_id: str, slice_name: str, region: str):
                          feature_dir_path=feature_dir_path)
 
 
-@app.route('/compare', methods=['GET', 'POST'])
+@app.route('/compare')
 def compare_page():
     """Group-based comparison page - allows creating multiple groups for comparison"""
     if request.method == 'GET':
         rats = scan_available_rats()
-        regions = Config.PREDEFINED_REGIONS
+        regions = get_directories_with_tif_images(Config.DATA_DIR)
         return render_template('compare.html', rats=rats, regions=regions)
-    
-    elif request.method == 'POST':
-        # Handle group-based comparison form submission
-        # !!! TODO: Implement the group-based comparison logic here
-        # This will receive JSON data with multiple groups containing rats and regions
-        
-        # For now, return a placeholder response
-        return jsonify({
-            'status': 'placeholder',
-            'message': 'Group-based comparison logic needs to be implemented',
-            'groups': request.get_json() if request.is_json else {}
-        })
 
+@app.route('/experiment/<experiment_id>')
+def experiment_page(experiment_id : str):
+    """Group-based comparison page - allows creating multiple groups for comparison"""
+    
+    comparison_results_data = get_comparison_data(experiment_id)
+    return render_template('experiment.html', data=comparison_results_data)
 
 @app.route('/api/rats')
 def api_rats():
@@ -419,6 +193,16 @@ def api_regions(rat_id: str):
     regions = get_rat_regions(rat_id)
     return jsonify(regions)
 
+# Convert form data to RatGroup objects
+def construct_RatGroup(json_group):
+    group_num = json_group.get('groupNum')
+    group_name = json_group.get('groupName', f"Group {group_num}")
+    rats = json_group.get('rats', [])
+    regions = json_group.get('regions', [])
+    if rats == ['ALL_RATS']: rats = ALL_RATS
+    if regions == ['ALL_REGIONS']: regions = ALL_REGIONS
+    return RatGroup(rats=rats, regions=regions, group_name=group_name)
+
 @app.route('/api/compare/groups', methods=['POST'])
 def api_compare_groups():
     """API endpoint for group-based comparison"""
@@ -430,41 +214,19 @@ def api_compare_groups():
         groups = data['groups']
         if len(groups) < 2:
             return jsonify({'error': 'At least 2 groups required for comparison'}), 400
+
+        # Extract experiment metadata
+        experiment_name = data.get('experiment_name', '')
+        experimenter_name = data.get('experimenter_name', '')
+
+        rat_groups = [construct_RatGroup(group_data) for group_data in groups]
+
+        exp_id = run_quantification(rat_groups, experiment_name, experimenter_name)
         
-        # Import RatGroup and constants
-        from src.experiments.RatGroup import RatGroup, ALL_RATS, ALL_REGIONS
-        
-        # Convert form data to RatGroup objects
-        rat_groups = []
-        for group_data in groups:
-            group_num = group_data.get('groupNum')
-            rats = group_data.get('rats', [])
-            regions = group_data.get('regions', [])
-            
-            # Handle "All rats" selection - frontend sends ['ALL_RATS']
-            if rats == ['ALL_RATS']:
-                rats = ALL_RATS
-            
-            # Handle "All regions" selection - frontend sends ['ALL_REGIONS']
-            if regions == ['ALL_REGIONS']:
-                regions = ALL_REGIONS
-            
-            # Create RatGroup object
-            group_name = f"Group {group_num}"
-            rat_group = RatGroup(rats=rats, regions=regions, group_name=group_name)
-            rat_groups.append(rat_group)
-        
-        # !!! TODO: Implement actual comparison logic here using rat_groups
-        # This should:
-        # 1. Load data for each group's rats and regions
-        # 2. Calculate summary statistics
-        # 3. Generate comparison visualizations
-        # 4. Perform statistical tests
-        
-        # Placeholder response with actual group info
         result = {
             'status': 'success',
             'message': 'Comparison completed (placeholder)',
+            'experiment_id' : exp_id,
             'groups_analyzed': len(rat_groups),
             'summary': {
                 'total_rats': sum(len(g.rats) if g.rats != ALL_RATS else len(scan_available_rats()) for g in rat_groups),
@@ -477,12 +239,14 @@ def api_compare_groups():
             },
             'rat_groups_created': [g.group_name for g in rat_groups]
         }
-        
         return jsonify(result)
         
     except Exception as e:
         logger.error(f"Error in group comparison: {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+
         return jsonify({'error': f'Comparison failed: {str(e)}'}), 500
+
 
 @app.errorhandler(404)
 def not_found(error):

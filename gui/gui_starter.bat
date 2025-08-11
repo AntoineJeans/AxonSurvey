@@ -2,6 +2,10 @@
 echo Starting Rat Control GUI...
 echo.
 
+REM Change to the parent directory (root)
+cd /d "%~dp0.."
+echo Current directory: %CD%
+
 REM Set your conda environment name here
 set CONDA_ENV_NAME=AxonSurveyEnv
 
@@ -50,10 +54,11 @@ echo  3. Or simply close this window
 echo ====================================================
 echo.
 
-start /b python app.py
+start /b python gui/app.py
 
 REM Start Flask and open browser
 echo Starting server and opening browser... Forgive the delay, the backend is python
+echo If there's an error when browser opens, try refreshing a couple times
 timeout /t 10 /nobreak
 start "" "firefox.exe" --new-window "http://localhost:5000"
 

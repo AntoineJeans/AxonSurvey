@@ -1,0 +1,82 @@
+---
+description: Use when user asks to create or update *.mdc files
+globs: **/*.mdc
+alwaysApply: false
+---
+# MDC File Format Guide
+
+MDC (Markdown Configuration) files give Cursor AI context-specific instructions. Each file has:
+
+1. **Frontmatter** – metadata at top, enclosed by `---`
+2. **Markdown Content** – instructions in Markdown
+
+## Frontmatter
+
+Format:
+```
+
+---
+
+description: Brief description
+globs: \*\*/*.js, \*\*/*.ts  # Comma-separated, no \[] or quotes
+alwaysApply: false       # true for global rules
+------------------------------------------------
+
+````
+> **Note**: Not strict YAML. `globs` should be specific. Leave empty if only applies in narrow cases. For all files, set `alwaysApply: true` instead.
+
+**Examples:**
+- `**/*.js` – all JS files  
+- `src/**/*.jsx` – JSX in `src`  
+- `**/components/**/*.vue` – Vue in any `components` dir
+
+## Markdown Content
+
+After frontmatter, write valid Markdown:
+```markdown
+# Title
+## Section 1
+- Guidelines
+- Examples
+## Section 2
+Details...
+````
+
+## Special Features
+
+* **File References**: `[rule.mdc](mdc:path/to/rule.mdc)` – includes linked file in context.
+* **Code Blocks**: Use fenced code:
+
+````markdown
+```javascript
+function example() { return "Example"; }
+```
+````
+
+## Best Practices
+
+1. **Organization** – Numbered prefixes (`01-...`), `tasks/` subdir for task rules, descriptive filenames.
+2. **Frontmatter Specificity** – Precise `globs`, clear `description`, `alwaysApply: true` only for global rules.
+3. **Content Structure** – Clear H1, logical headings, actionable instructions, examples.
+4. **Size** – Keep <300 lines, split large rules, link with references.
+
+## Usage
+
+Rules auto-apply if:
+
+1. File matches `globs`
+2. `alwaysApply: true`
+3. Description matches user request
+4. Explicitly referenced
+
+## Managing Rules
+
+* Add/rename/remove → update `010-workflow.mdc`
+* Multi-file changes → review [999-mdc-format](mdc:.cursor/rules/999-mdc-format.mdc)
+
+## Updating Rules
+
+* Keep frontmatter format
+* Retain `globs` unless scope change intended
+* Update `description` if purpose changes
+* Consider propagation to related rules

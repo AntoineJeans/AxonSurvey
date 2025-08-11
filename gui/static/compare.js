@@ -35,6 +35,14 @@ function createNewGroup() {
     // Build complete HTML structure
     let contentHtml = '';
     
+    // Group name section
+    contentHtml += '<div class="group-name-section">';
+    contentHtml += '<h3>📝 Group Name</h3>';
+    contentHtml += '<div class="field-group">';
+    contentHtml += `<input type="text" id="group-name-${currentGroupNum}" name="group-name-${currentGroupNum}" placeholder="Enter group name" value="Group ${currentGroupNum}">`;
+    contentHtml += '</div>';
+    contentHtml += '</div>';
+    
     // Rats section
     contentHtml += '<div class="selector-section">';
     contentHtml += '<h3>🐭 Rats Selector</h3>';
@@ -157,6 +165,12 @@ function renumberGroups() {
             }
         });
         
+        // Update group name input value if it's the default
+        const groupNameInput = content.querySelector(`input[id^="group-name-"]`);
+        if (groupNameInput && groupNameInput.value === `Group ${oldGroupNum}`) {
+            groupNameInput.value = `Group ${newGroupNum}`;
+        }
+        
         // Update all label 'for' attributes
         const labels = content.querySelectorAll('label');
         labels.forEach(label => {
@@ -210,6 +224,20 @@ function updateAllRegionsCheckbox(groupNum) {
 }
 
 function generateComparison() {
+    // Collect experiment metadata
+    const experiment_name = document.getElementById('experiment_name').value.trim();
+    const experimenter_name = document.getElementById('experimenter_name').value.trim();
+    
+    // Validate required fields
+    if (!experiment_name) {
+        alert('Please enter an experiment name.');
+        return;
+    }
+    if (!experimenter_name) {
+        alert('Please enter an experimenter name.');
+        return;
+    }
+    
     // Collect all group data
     const groups = [];
     
@@ -236,8 +264,13 @@ function generateComparison() {
                 selectedRegions = ['ALL_REGIONS'];
             }
             
+            // Get group name
+            const groupNameInput = document.getElementById(`group-name-${groupNum}`);
+            const groupName = groupNameInput ? groupNameInput.value.trim() || `Group ${groupNum}` : `Group ${groupNum}`;
+            
             groups.push({
                 groupNum: groupNum,
+                groupName: groupName,
                 rats: selectedRats,
                 regions: selectedRegions
             });
@@ -251,7 +284,19 @@ function generateComparison() {
     
     // Show loading state
     const outputArea = document.getElementById('outputArea');
-    outputArea.innerHTML = '<div style="text-align: center; padding: 40px;"><strong>Generating comparison...</strong><br><small>This is a placeholder - actual comparison logic needs to be implemented</small></div>';
+    const placeholderText = document.getElementById('placeholderText');
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    
+    // Hide placeholder and show spinner
+    placeholderText.style.display = 'none';
+    loadingSpinner.style.display = 'block';
+    
+    // Prepare request data with experiment metadata
+    const requestData = {
+        groups: groups,
+        experiment_name: experiment_name,
+        experimenter_name: experimenter_name
+    };
     
     // Call the API endpoint
     fetch('/api/compare/groups', {
@@ -259,23 +304,32 @@ function generateComparison() {
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ groups: groups })
+        body: JSON.stringify(requestData)
     })
     .then(response => response.json())
     .then(data => {
         if (data.error) {
-            outputArea.innerHTML = `<div style="color: red; text-align: center; padding: 40px;"><strong>Error:</strong> ${data.error}</div>`;
+            displayComparisonResults(groups, { status: 'error', message: data.error });
         } else {
             displayComparisonResults(groups, data);
         }
     })
     .catch(error => {
-        outputArea.innerHTML = `<div style="color: red; text-align: center; padding: 40px;"><strong>Error:</strong> ${error.message}</div>`;
+        displayComparisonResults(groups, { status: 'error', message: error.message });
     });
 }
 
 function displayComparisonResults(groups, apiData) {
     const outputArea = document.getElementById('outputArea');
+    const placeholderText = document.getElementById('placeholderText');
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    
+    // Hide loading spinner
+    loadingSpinner.style.display = 'none';
+    
+    // Create results container
+    const resultsContainer = document.createElement('div');
+    resultsContainer.id = 'resultsContainer';
     
     let html = '<h3>📊 Comparison Results</h3>';
     html += '<div style="margin-bottom: 20px;">';
@@ -300,6 +354,15 @@ function displayComparisonResults(groups, apiData) {
         html += `• Tests: ${apiData.results.tests}<br>`;
         html += '<br><em>Backend comparison logic needs to be implemented in app.py</em>';
         html += '</div>';
+        
+        // Add Full Results button if experiment_id is available
+        if (apiData.experiment_id) {
+            html += '<div style="text-align: center; margin: 20px 0;">';
+            html += `<a href="/experiment/${apiData.experiment_id}" class="btn btn-primary" style="font-size: 16px; padding: 12px 24px;">`;
+            html += '📊 View Full Results';
+            html += '</a>';
+            html += '</div>';
+        }
     } else {
         html += '<div style="background: #f8d7da; padding: 20px; border-radius: 5px; margin: 20px 0; border: 1px solid #f5c6cb;">';
         html += '<strong>❌ Analysis Failed:</strong><br>';
@@ -307,5 +370,16 @@ function displayComparisonResults(groups, apiData) {
         html += '</div>';
     }
     
-    outputArea.innerHTML = html;
+    resultsContainer.innerHTML = html;
+    
+    // Clear any existing results and add new ones
+    const existingResults = document.getElementById('resultsContainer');
+    if (existingResults) {
+        existingResults.remove();
+    }
+    
+    outputArea.appendChild(resultsContainer);
+    
+    // Ensure placeholder text is hidden when results are shown
+    placeholderText.style.display = 'none';
 }

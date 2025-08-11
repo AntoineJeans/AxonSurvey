@@ -17,6 +17,9 @@ class RatGroup:
         if self.regions == ALL_REGIONS: return True
         return region_name in self.regions
 
+    def tostring(self):
+        return f"[rats: {self.rats}; regions: {self.regions}]"
+
 
 ## Some premade RatGroups for testing
 contralesional_group = RatGroup(rats=ALL_RATS, 
