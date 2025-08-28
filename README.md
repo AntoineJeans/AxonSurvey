@@ -110,7 +110,7 @@ projet/
 Projects using this workflow should follow a similar series of steps:
 
 1. **Data acquisition and structuring**
-Images should be taken, then added to a repository structure as described in the file_structure_creation notebook. Each raw image can be manually separated in different ROIs, specific regions to seperate for quantification.
+Images should be taken, then added to a repository structure as described in the file_structure_creation notebook. Each raw image can be manually separated in different ROIs, specific regions to seperate for quantification. Here's a video tutorial on this https://www.youtube.com/watch?v=5ao4zGMchgY
 
 2. **Sampling**
 The sampling notebook should have parameters set and be executed to sample from selected regions.
