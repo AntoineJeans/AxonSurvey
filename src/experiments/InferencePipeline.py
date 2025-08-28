@@ -79,7 +79,7 @@ class InferencePipeline():
 
         self.experiment_id = self._get_next_experiment_id()
         self.experiment_date = datetime.now().strftime("%Y-%m-%d")
-        self.experiment_id_string = self.experiment_id
+        self.experiment_id_string = str(self.experiment_id)
         
         # Experiment metadata
         self.experiment_name = None

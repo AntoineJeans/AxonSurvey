@@ -3,6 +3,9 @@
 from ..utils.imageio import tif_to_numpy
 import numpy as np
 
+
+from src.utils.imageio import generate_image_outer_mask
+
 class BaseEstimator:
     """Base class for implementing density estimation algorithms with sample data and model support."""
     
@@ -26,7 +29,8 @@ class BaseEstimator:
     def predict_image_density(self, image_path):
         """Predict density for a single image using the model."""
         image = tif_to_numpy(image_path)
-        density_map = self.model.predict(image)[:, :, -1]
+        mask = generate_image_outer_mask(image)
+        density_map = self.model.predict(image, image_path=image_path, mask=mask)[:, :, -1]
         predicted_properties = np.nanmean(density_map)
         return predicted_properties
         

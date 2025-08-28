@@ -19,7 +19,7 @@ import copy
 import os
 
 
-use_DL_models = False
+use_DL_models = True
 use_ensemble_extractor_models = False
 
 # img_input_size has to be 128 for those models
