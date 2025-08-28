@@ -65,7 +65,9 @@ def convert_tif_to_jpg_and_save(tif_path: Path, output_filename: str, lumin_scal
            
             if not use_raw_path:
                 # Create static/images directory if it doesn't exist
-                static_images_dir = Path("static/images")
+                # Use path relative to the gui directory, not current working directory
+                gui_dir = Path(__file__).parent.parent
+                static_images_dir = gui_dir / "static" / "images"
                 static_images_dir.mkdir(parents=True, exist_ok=True)
             
                 # Save as JPG
@@ -135,7 +137,9 @@ def get_cached_feature_map_path(rat_id: str, slice_name: str, region: str) -> Op
 
 def _setup_comparison_directory() -> Path:
     """Create and return the comparison directory path"""
-    comparison_dir = Path("./gui/static/comparison")
+    # Use path relative to the gui directory, not current working directory
+    gui_dir = Path(__file__).parent.parent
+    comparison_dir = gui_dir / "static" / "comparison"
     comparison_dir.mkdir(parents=True, exist_ok=True)
     return comparison_dir
 
